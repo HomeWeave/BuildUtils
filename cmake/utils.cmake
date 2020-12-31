@@ -108,6 +108,22 @@ function(process_proto_file)
         message(FATAL_ERROR "You must provide a DEST argumrnt.")
     endif()
 
+    # Scan imports to associate as dependencies.
+    message(STATUS "Processing Proto: ${PARSED_ARGS_SRC}")
+    file(READ "${PARSED_ARGS_SRC}" proto_file_content)
+    string(REPLACE ";" "SEMI-COLON" proto_file_lines "${proto_file_content}")
+    string(REPLACE "\n" ";" proto_file_lines "${proto_file_lines}")
+    foreach(line in LISTS ${proto_file_lines})
+        string(REGEX MATCH "import *\"([^\"]+)\"" match "${line}")
+        if (match)
+            list(APPEND dependencies "${CMAKE_MATCH_1}")
+        endif()
+    endforeach()
+
+    # Check if there are RPC services.
+    string(REGEX MATCH "service [a-zA-Z0-9]+ *{" services
+           "${proto_file_content}")
+
     get_filename_component(proto_file_name "${PARSED_ARGS_SRC}" NAME_WE)
     get_filename_component(rel_path "${PARSED_ARGS_DEST}" DIRECTORY)
 
@@ -126,6 +142,8 @@ function(process_proto_file)
     set(REL_PATH "${rel_path}" PARENT_SCOPE)
     set(DEST_PROTO_FILE "${copy_proto_file}" PARENT_SCOPE)
     set(CORE_NAME "${proto_file_name}" PARENT_SCOPE)
+    set(DEPENDENCIES "${dependencies}" PARENT_SCOPE)
+    set(SERVICES "${services}" PARENT_SCOPE)
 endfunction()
 
 function(cc_process_proto_file)
@@ -153,6 +171,8 @@ function(cc_process_proto_file)
     set(PROTO_REL_PATH "${REL_PATH}")
     set(INPUT_PROTO_FILE "${DEST_PROTO_FILE}")
     set(PROTO_CORE_NAME "${CORE_NAME}")
+    set(PROTO_DEPENDENCIES "${DEPENDENCIES}")
+    set(PROTO_SERVICES "${SERVICES}")
 
     set(CC_GEN_ROOT_DIR "${CMAKE_BINARY_DIR}/gen-cc-proto")
     file(MAKE_DIRECTORY ${CC_GEN_ROOT_DIR})
@@ -163,11 +183,10 @@ function(cc_process_proto_file)
     list(APPEND proto_srcs
         "${CC_GEN_ROOT_DIR}/${PROTO_REL_PATH}/${PROTO_CORE_NAME}.pb.cc")
 
-    message(STATUS "Reading: ${PARSED_ARGS_SRC}")
-    file(READ "${PARSED_ARGS_SRC}" proto_file_content)
-    string(REGEX MATCH "service [a-zA-Z0-9]+ *{" matched
-           "${proto_file_content}")
-    if(matched)
+    message(STATUS "  - Services: ${PROTO_SERVICES}")
+    message(STATUS "  - Dependencies: ${PROTO_DEPENDENCIES}")
+
+    if(PROTO_SERVICES)
         list(APPEND output_files
              "${CC_GEN_ROOT_DIR}/${PROTO_REL_PATH}/${PROTO_CORE_NAME}.grpc.pb.cc"
              "${CC_GEN_ROOT_DIR}/${PROTO_REL_PATH}/${PROTO_CORE_NAME}.grpc.pb.h")
@@ -175,7 +194,7 @@ function(cc_process_proto_file)
              "${CC_GEN_ROOT_DIR}/${PROTO_REL_PATH}/${PROTO_CORE_NAME}.grpc.pb.cc")
     endif()
 
-    message(STATUS "Will generate: ${output_files}")
+    message(STATUS "  - Will generate: ${output_files}")
 
     add_custom_command(
       OUTPUT ${output_files}
