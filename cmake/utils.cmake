@@ -82,8 +82,11 @@ function(git_fetch_content name git_repo git_tag)
                          GIT_TAG "${git_tag}")
     if(NOT ${name}_POPULATED)
         FetchContent_Populate(${name})
-        add_subdirectory(${${name}_SOURCE_DIR} ${${name}_BINARY_DIR})
+        if (EXISTS "${${name}_SOURCE_DIR}/CMakeLists.txt")
+            add_subdirectory(${${name}_SOURCE_DIR} ${${name}_BINARY_DIR})
+        endif()
     endif()
+    set(${name}_SOURCE_DIR ${${name}_SOURCE_DIR} PARENT_SCOPE)
 endfunction()
 
 
