@@ -139,7 +139,8 @@ function(process_proto_file)
         OUTPUT ${copy_proto_file}
         COMMAND ${CMAKE_COMMAND} -E copy
                 ${CMAKE_CURRENT_SOURCE_DIR}/${PARSED_ARGS_SRC}
-                ${copy_proto_file})
+                ${copy_proto_file}
+        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/${PARSED_ARGS_SRC})
 
     set(ROOT_DIR "${out_proto_base_dir}" PARENT_SCOPE)
     set(REL_PATH "${rel_path}" PARENT_SCOPE)
