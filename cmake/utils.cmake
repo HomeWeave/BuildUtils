@@ -32,6 +32,8 @@ string(CONCAT EMBED_PY_CODE
 "out_dir = sys.argv[2]\n"
 "base_dir = os.path.abspath(sys.argv[3])\n"
 "files = [os.path.abspath(x) for x in sys.argv[4:]]\n"
+"if not files:\n"
+"  files = [os.path.join(d, f) for d, _, fs in os.walk(base_dir) for f in fs]\n"
 "\n"
 "target_c_var = target\n"
 "\n"
@@ -303,7 +305,7 @@ function(embed_resource)
         message(FATAL_ERROR "You must provide a BASE_DIR.")
     endif()
     if(NOT PARSED_ARGS_SOURCES)
-        message(FATAL_ERROR "You must provide SOURCES (input file) arg.")
+        message(WARNING "Embedding the entire directory.")
     endif()
     message(STATUS "Sources: ${PARSED_ARGS_SOURCES}")
 
