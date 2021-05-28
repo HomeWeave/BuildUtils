@@ -289,6 +289,66 @@ function(py_process_proto_file)
     set(OUTPUT_FILE "${OUTPUT_FILE}" PARENT_SCOPE)
 endfunction()
 
+function(js_process_proto_file)
+    cmake_parse_arguments(
+        PARSED_ARGS
+        ""
+        "TARGET;SRC;PROTO_DEST;JS_DEST"
+        "PROTO_DEPS"
+        ${ARGN}
+    )
+    if(NOT PARSED_ARGS_TARGET)
+        message(FATAL_ERROR "You must provide a TARGET name.")
+    endif()
+    if(NOT PARSED_ARGS_SRC)
+        message(FATAL_ERROR "You must provide a SRC (input file) arg.")
+    endif()
+    if (NOT PARSED_ARGS_PROTO_DEST)
+        message(FATAL_ERROR "You must provide a PROTO_DEST argumrnt.")
+    endif()
+    if (NOT PARSED_ARGS_JS_DEST)
+        message(FATAL_ERROR "You must provide a JS_DEST argumrnt.")
+    endif()
+
+    process_proto_file(
+        SRC ${PARSED_ARGS_SRC}
+        DEST ${PARSED_ARGS_PROTO_DEST})
+    set(PROTO_ROOT_DIR "${ROOT_DIR}")
+    set(PROTO_REL_PATH "${REL_PATH}")
+    set(INPUT_PROTO_FILE "${DEST_PROTO_FILE}")
+    set(PROTO_CORE_NAME "${CORE_NAME}")
+    set(PROTO_DEPENDENCIES "${DEPENDENCIES}")
+    set(PROTO_SERVICES "${SERVICES}")
+
+    set(output_file
+        "${PARSED_ARGS_JS_DEST}/${PROTO_REL_PATH}/${PROTO_CORE_NAME}.js")
+
+    message(STATUS "  - Will generate: ${output_file}")
+
+    set(library_path "${PROTO_REL_PATH}/${PROTO_CORE_NAME}")
+    set(binary_path "${CMAKE_CURRENT_SOURCE_DIR}/${PARSED_ARGS_JS_DEST}")
+    add_custom_command(
+      OUTPUT ${output_file}
+      COMMAND protoc
+           -I "${PROTO_ROOT_DIR}"
+           --js_out "library=${library_path},binary:${binary_path}"
+           "${INPUT_PROTO_FILE}"
+      WORKING_DIRECTORY "${PROTO_ROOT_DIR}"
+      DEPENDS "${INPUT_PROTO_FILE}"
+    )
+    add_custom_target(
+        ${PARSED_ARGS_TARGET}_js_genfiles_target
+        DEPENDS ${output_file})
+
+    foreach(proto_deps IN ITEMS ${PARSED_ARGS_PROTO_DEPS})
+        add_dependencies(${PARSED_ARGS_TARGET}_js_genfiles_target
+                         ${proto_deps}_js_genfiles_target)
+    endforeach()
+
+    set(OUTPUT_JS_FILE ${output_file} PARENT_SCOPE)
+    set(GENFILE_TARGET ${PARSED_ARGS_TARGET}_js_genfiles_target PARENT_SCOPE)
+endfunction()
+
 function(embed_resource)
     cmake_parse_arguments(
         PARSED_ARGS
