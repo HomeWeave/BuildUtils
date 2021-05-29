@@ -331,7 +331,7 @@ function(js_process_proto_file)
       OUTPUT ${output_file}
       COMMAND protoc
            -I "${PROTO_ROOT_DIR}"
-           --js_out "library=${library_path},binary:${binary_path}"
+           --js_out "import_style=commonjs,binary:${binary_path}"
            "${INPUT_PROTO_FILE}"
       WORKING_DIRECTORY "${PROTO_ROOT_DIR}"
       DEPENDS "${INPUT_PROTO_FILE}"
