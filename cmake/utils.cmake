@@ -103,7 +103,7 @@ function(process_proto_file)
         PARSED_ARGS
         ""
         "SRC;DEST"
-        ""
+        "PROTO_DEPS"
         ${ARGN}
     )
     if(NOT PARSED_ARGS_SRC)
@@ -136,13 +136,25 @@ function(process_proto_file)
     set(copy_proto_file
         "${out_proto_base_dir}/${rel_path}/${proto_file_name}.proto")
 
-    file(MAKE_DIRECTORY "${out_proto_base_dir}/${rel_path}")
-    add_custom_command(
-        OUTPUT ${copy_proto_file}
-        COMMAND ${CMAKE_COMMAND} -E copy
-                ${CMAKE_CURRENT_SOURCE_DIR}/${PARSED_ARGS_SRC}
-                ${copy_proto_file}
-        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/${PARSED_ARGS_SRC})
+    if(NOT TARGET ${PARSED_ARGS_TARGET}_proto_genfiles_target)
+        file(MAKE_DIRECTORY "${out_proto_base_dir}/${rel_path}")
+
+        add_custom_command(
+            OUTPUT ${copy_proto_file}
+            COMMAND ${CMAKE_COMMAND} -E copy
+                    ${CMAKE_CURRENT_SOURCE_DIR}/${PARSED_ARGS_SRC}
+                    ${copy_proto_file}
+            DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/${PARSED_ARGS_SRC})
+
+        add_custom_target(
+            ${PARSED_ARGS_TARGET}_proto_genfiles_target
+            DEPENDS ${copy_proto_file})
+
+        foreach(proto_deps IN ITEMS ${PARSED_ARGS_PROTO_DEPS})
+            add_dependencies(${PARSED_ARGS_TARGET}_proto_genfiles_target
+                             ${proto_deps}_proto_genfiles_target)
+        endforeach()
+    endif()
 
     set(ROOT_DIR "${out_proto_base_dir}" PARENT_SCOPE)
     set(REL_PATH "${rel_path}" PARENT_SCOPE)
@@ -150,6 +162,7 @@ function(process_proto_file)
     set(CORE_NAME "${proto_file_name}" PARENT_SCOPE)
     set(DEPENDENCIES "${dependencies}" PARENT_SCOPE)
     set(SERVICES "${services}" PARENT_SCOPE)
+    set(COPY_PROTO_TARGET "${PARSED_ARGS_TARGET}_proto_genfiles_target" PARENT_SCOPE)
 endfunction()
 
 function(cc_process_proto_file)
@@ -172,13 +185,15 @@ function(cc_process_proto_file)
 
     process_proto_file(
         SRC ${PARSED_ARGS_SRC}
-        DEST ${PARSED_ARGS_DEST})
+        DEST ${PARSED_ARGS_DEST}
+        PROTO_DEPS ${PARSED_ARGS_PROTO_DEPS})
     set(PROTO_ROOT_DIR "${ROOT_DIR}")
     set(PROTO_REL_PATH "${REL_PATH}")
     set(INPUT_PROTO_FILE "${DEST_PROTO_FILE}")
     set(PROTO_CORE_NAME "${CORE_NAME}")
     set(PROTO_DEPENDENCIES "${DEPENDENCIES}")
     set(PROTO_SERVICES "${SERVICES}")
+    set(COPY_PROTO_TARGET "${COPY_PROTO_TARGET}")
 
     set(CC_GEN_ROOT_DIR "${CMAKE_BINARY_DIR}/gen-cc-proto")
     file(MAKE_DIRECTORY ${CC_GEN_ROOT_DIR})
@@ -216,6 +231,9 @@ function(cc_process_proto_file)
     add_custom_target(
         ${PARSED_ARGS_TARGET}_cc_genfiles_target
         DEPENDS ${output_files})
+    add_dependencies(
+        ${PARSED_ARGS_TARGET}_cc_genfiles_target
+        ${COPY_PROTO_TARGET})
 
     add_library(${PARSED_ARGS_TARGET} STATIC ${output_files})
     target_include_directories(${PARSED_ARGS_TARGET} PUBLIC ${CC_GEN_ROOT_DIR})
@@ -260,6 +278,7 @@ function(py_process_proto_file)
     set(PROTO_REL_PATH "${REL_PATH}")
     set(INPUT_PROTO_FILE "${DEST_PROTO_FILE}")
     set(PROTO_CORE_NAME "${CORE_NAME}")
+    set(COPY_PROTO_TARGET "${COPY_PROTO_TARGET}")
 
     set(PY_GEN_ROOT_DIR "${CMAKE_BINARY_DIR}/gen-py-proto")
     set(OUTPUT_FILE
@@ -283,6 +302,7 @@ function(py_process_proto_file)
     add_custom_target(${PARSED_ARGS_TARGET}_py_genfiles_target
                       DEPENDS ${OUTPUT_FILE})
     add_dependencies(${PARSED_ARGS_TARGET}_py_genfiles_target protoc)
+    add_dependencies(${PARSED_ARGS_TARGET}_py_genfiles_target ${COPY_PROTO_TARGET})
 
     set(GENFILES_TARGET "${PARSED_ARGS_TARGET}_py_genfiles_target" PARENT_SCOPE)
     set(PY_PROTO_ROOT_DIR "${PY_GEN_ROOT_DIR}" PARENT_SCOPE)
@@ -312,13 +332,15 @@ function(js_process_proto_file)
 
     process_proto_file(
         SRC ${PARSED_ARGS_SRC}
-        DEST ${PARSED_ARGS_PROTO_DEST})
+        DEST ${PARSED_ARGS_PROTO_DEST}
+        PROTO_DEPS ${PARSED_ARGS_PROTO_DEPS})
     set(PROTO_ROOT_DIR "${ROOT_DIR}")
     set(PROTO_REL_PATH "${REL_PATH}")
     set(INPUT_PROTO_FILE "${DEST_PROTO_FILE}")
     set(PROTO_CORE_NAME "${CORE_NAME}")
     set(PROTO_DEPENDENCIES "${DEPENDENCIES}")
     set(PROTO_SERVICES "${SERVICES}")
+    set(COPY_PROTO_TARGET "${COPY_PROTO_TARGET}")
 
     set(output_file
         "${PARSED_ARGS_JS_DEST}/${PROTO_REL_PATH}/${PROTO_CORE_NAME}.js")
@@ -339,6 +361,7 @@ function(js_process_proto_file)
     add_custom_target(
         ${PARSED_ARGS_TARGET}_js_genfiles_target
         DEPENDS ${output_file})
+    add_dependencies(${PARSED_ARGS_TARGET}_js_genfiles_target ${COPY_PROTO_TARGET})
 
     foreach(proto_deps IN ITEMS ${PARSED_ARGS_PROTO_DEPS})
         add_dependencies(${PARSED_ARGS_TARGET}_js_genfiles_target
