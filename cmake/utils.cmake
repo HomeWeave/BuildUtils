@@ -243,12 +243,18 @@ function(cc_process_proto_file)
     message(STATUS "  - Services: ${PROTO_SERVICES}")
     message(STATUS "  - Dependencies: ${PROTO_DEPENDENCIES}")
 
+    set(GRPC_PARAM "")
     if(PROTO_SERVICES)
         list(APPEND output_files
              "${CC_GEN_ROOT_DIR}/${PROTO_REL_PATH}/${PROTO_CORE_NAME}.grpc.pb.cc"
              "${CC_GEN_ROOT_DIR}/${PROTO_REL_PATH}/${PROTO_CORE_NAME}.grpc.pb.h")
         list(APPEND proto_srcs
              "${CC_GEN_ROOT_DIR}/${PROTO_REL_PATH}/${PROTO_CORE_NAME}.grpc.pb.cc")
+        set(GRPC_PARAM --plugin=protoc-gen-grpc=$<TARGET_FILE:grpc_cpp_plugin>)
+        set(GRPC_PARAM "${GRPC_PARAM} --grpc_out ${CC_GEN_ROOT_DIR}")
+
+        target_link_libraries(${PARSED_ARGS_TARGET} grpc++_unsecure)
+        add_dependencies(${PARSED_ARGS_TARGET} grpc_cpp_plugin)
     endif()
 
     message(STATUS "  - Will generate: ${output_files}")
@@ -256,10 +262,9 @@ function(cc_process_proto_file)
     add_custom_command(
       OUTPUT ${output_files}
       COMMAND $<TARGET_FILE:protoc>
-           --grpc_out "${CC_GEN_ROOT_DIR}"
            --cpp_out "${CC_GEN_ROOT_DIR}"
            -I "${PROTO_ROOT_DIR}"
-           --plugin=protoc-gen-grpc=$<TARGET_FILE:grpc_cpp_plugin>
+           ${GRPC_PARAM}
            "${INPUT_PROTO_FILE}"
       WORKING_DIRECTORY "${PROTO_ROOT_DIR}"
       DEPENDS "${INPUT_PROTO_FILE}"
@@ -273,12 +278,10 @@ function(cc_process_proto_file)
 
     add_library(${PARSED_ARGS_TARGET} STATIC ${output_files})
     target_include_directories(${PARSED_ARGS_TARGET} PUBLIC ${CC_GEN_ROOT_DIR})
-    target_link_libraries(${PARSED_ARGS_TARGET} grpc++_unsecure)
     target_link_libraries(${PARSED_ARGS_TARGET} libprotobuf)
     set_property(TARGET ${PARSED_ARGS_TARGET}
                  PROPERTY POSITION_INDEPENDENT_CODE ON)
 
-    add_dependencies(${PARSED_ARGS_TARGET} grpc_cpp_plugin)
     add_dependencies(${PARSED_ARGS_TARGET} protoc)
     add_dependencies(${PARSED_ARGS_TARGET} libprotobuf)
     add_dependencies(${PARSED_ARGS_TARGET}
