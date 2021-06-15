@@ -91,6 +91,42 @@ function(git_fetch_content name git_repo git_tag)
     set(${name}_SOURCE_DIR ${${name}_SOURCE_DIR} PARENT_SCOPE)
 endfunction()
 
+function(git_fetch_content_v2)
+    cmake_parse_arguments(
+        PARSED_ARGS
+        ""
+        "NAME;URL;VERSION;CMAKE_DIR"
+        ""
+        ${ARGN}
+    )
+    if(NOT PARSED_ARGS_NAME)
+        message(FATAL_ERROR "You must provide a NAME arg.")
+    endif()
+    if (NOT PARSED_ARGS_URL)
+        message(FATAL_ERROR "You must provide a URL argumrnt.")
+    endif()
+    if (NOT PARSED_ARGS_VERSION)
+        message(FATAL_ERROR "You must provide a VERSION argumrnt.")
+    endif()
+    if (NOT PARSED_ARGS_CMAKE_DIR)
+        set(PARSED_ARGS_CMAKE_DIR ".")
+    endif()
+
+    set(FETCHCONTENT_QUIET OFF)
+    FetchContent_Declare(${PARSED_ARGS_NAME} GIT_REPOSITORY "${PARSED_ARGS_URL}"
+                         GIT_TAG "${PARSED_ARGS_VERSION}")
+    if(NOT ${PARSED_ARGS_NAME}_POPULATED)
+        FetchContent_Populate(${PARSED_ARGS_NAME})
+        if (EXISTS "${${PARSED_ARGS_NAME}_SOURCE_DIR}/${PARSED_ARGS_CMAKE_DIR}/CMakeLists.txt")
+            add_subdirectory(
+                ${${PARSED_ARGS_NAME}_SOURCE_DIR}/${PARSED_ARGS_CMAKE_DIR}
+                ${${PARSED_ARGS_NAME}_BINARY_DIR})
+        endif()
+    endif()
+    set(${PARSED_ARGS_NAME}_SOURCE_DIR ${${PARSED_ARGS_NAME}_SOURCE_DIR}
+        PARENT_SCOPE)
+endfunction()
+
 
 function(ensure_out_of_source_builds)
     if ( ${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_BINARY_DIR} )
