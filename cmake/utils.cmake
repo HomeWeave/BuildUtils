@@ -252,7 +252,7 @@ function(cc_process_proto_file)
              "${CC_GEN_ROOT_DIR}/${PROTO_REL_PATH}/${PROTO_CORE_NAME}.grpc.pb.cc")
 
         set(GRPC_PARAM --plugin=protoc-gen-grpc=$<TARGET_FILE:grpc_cpp_plugin>)
-        set(GRPC_PARAM "${GRPC_PARAM} --grpc_out ${CC_GEN_ROOT_DIR}")
+        set(GRPC_PARAM ${GRPC_PARAM} --grpc_out ${CC_GEN_ROOT_DIR})
     endif()
 
     message(STATUS "  - Will generate: ${output_files}")
