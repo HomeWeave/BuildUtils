@@ -250,11 +250,9 @@ function(cc_process_proto_file)
              "${CC_GEN_ROOT_DIR}/${PROTO_REL_PATH}/${PROTO_CORE_NAME}.grpc.pb.h")
         list(APPEND proto_srcs
              "${CC_GEN_ROOT_DIR}/${PROTO_REL_PATH}/${PROTO_CORE_NAME}.grpc.pb.cc")
+
         set(GRPC_PARAM --plugin=protoc-gen-grpc=$<TARGET_FILE:grpc_cpp_plugin>)
         set(GRPC_PARAM "${GRPC_PARAM} --grpc_out ${CC_GEN_ROOT_DIR}")
-
-        target_link_libraries(${PARSED_ARGS_TARGET} grpc++_unsecure)
-        add_dependencies(${PARSED_ARGS_TARGET} grpc_cpp_plugin)
     endif()
 
     message(STATUS "  - Will generate: ${output_files}")
@@ -286,6 +284,11 @@ function(cc_process_proto_file)
     add_dependencies(${PARSED_ARGS_TARGET} libprotobuf)
     add_dependencies(${PARSED_ARGS_TARGET}
                      ${PARSED_ARGS_TARGET}_cc_genfiles_target)
+
+    if(PROTO_SERVICES)
+        target_link_libraries(${PARSED_ARGS_TARGET} grpc++_unsecure)
+        add_dependencies(${PARSED_ARGS_TARGET} grpc_cpp_plugin)
+    endif()
 
     foreach(proto_deps IN ITEMS ${PARSED_ARGS_PROTO_DEPS})
         target_link_libraries(${PARSED_ARGS_TARGET} ${proto_deps})
