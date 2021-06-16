@@ -391,7 +391,7 @@ function(js_process_proto_file)
     message(STATUS "  - Will generate: ${output_file}")
 
     set(library_path "${PROTO_REL_PATH}/${PROTO_CORE_NAME}")
-    set(binary_path "${CMAKE_CURRENT_SOURCE_DIR}/${JS_DEST}")
+    set(binary_path "${JS_DEST}")
     add_custom_command(
       OUTPUT ${output_file}
       COMMAND protoc
