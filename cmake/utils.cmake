@@ -371,6 +371,8 @@ function(js_process_proto_file)
 
     set(JS_DEST "${CMAKE_BINARY_DIR}/gen-js-proto")
 
+    file(MAKE_DIRECTORY ${JS_DEST})
+
     process_proto_file(
         SRC ${PARSED_ARGS_SRC}
         DEST ${PARSED_ARGS_DEST}
