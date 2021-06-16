@@ -82,6 +82,7 @@ function(git_fetch_content name git_repo git_tag)
     set(FETCHCONTENT_QUIET OFF)
     FetchContent_Declare(${name} GIT_REPOSITORY "${git_repo}"
                          GIT_TAG "${git_tag}")
+    FetchContent_GetProperties(${name})
     if(NOT ${name}_POPULATED)
         FetchContent_Populate(${name})
         if (EXISTS "${${name}_SOURCE_DIR}/CMakeLists.txt")
@@ -115,6 +116,8 @@ function(git_fetch_content_v2)
     set(FETCHCONTENT_QUIET OFF)
     FetchContent_Declare(${PARSED_ARGS_NAME} GIT_REPOSITORY "${PARSED_ARGS_URL}"
                          GIT_TAG "${PARSED_ARGS_VERSION}")
+
+    FetchContent_GetProperties(${PARSED_ARGS_NAME})
     if(NOT ${PARSED_ARGS_NAME}_POPULATED)
         FetchContent_Populate(${PARSED_ARGS_NAME})
         if (EXISTS "${${PARSED_ARGS_NAME}_SOURCE_DIR}/${PARSED_ARGS_CMAKE_DIR}/CMakeLists.txt")
