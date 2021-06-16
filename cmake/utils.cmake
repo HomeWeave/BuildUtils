@@ -373,7 +373,7 @@ function(js_process_proto_file)
 
     process_proto_file(
         SRC ${PARSED_ARGS_SRC}
-        DEST ${PARSED_ARGS_PROTO_DEST}
+        DEST ${PARSED_ARGS_DEST}
         PROTO_DEPS ${PARSED_ARGS_PROTO_DEPS})
     set(PROTO_ROOT_DIR "${ROOT_DIR}")
     set(PROTO_REL_PATH "${REL_PATH}")
