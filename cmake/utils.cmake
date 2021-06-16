@@ -413,6 +413,7 @@ function(js_process_proto_file)
 
     set(OUTPUT_JS_FILE ${output_file} PARENT_SCOPE)
     set(GENFILE_TARGET ${PARSED_ARGS_TARGET}_js_genfiles_target PARENT_SCOPE)
+    set(JS_PROTO_BASE_DIR ${JS_DEST} PARENT_SCOPE)
 endfunction()
 
 function(embed_resource)
