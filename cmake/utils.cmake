@@ -355,7 +355,7 @@ function(js_process_proto_file)
     cmake_parse_arguments(
         PARSED_ARGS
         ""
-        "TARGET;SRC;PROTO_DEST;JS_DEST"
+        "TARGET;SRC;DEST"
         "PROTO_DEPS"
         ${ARGN}
     )
@@ -365,12 +365,11 @@ function(js_process_proto_file)
     if(NOT PARSED_ARGS_SRC)
         message(FATAL_ERROR "You must provide a SRC (input file) arg.")
     endif()
-    if (NOT PARSED_ARGS_PROTO_DEST)
-        message(FATAL_ERROR "You must provide a PROTO_DEST argumrnt.")
+    if (NOT PARSED_ARGS_DEST)
+        message(FATAL_ERROR "You must provide a DEST argumrnt.")
     endif()
-    if (NOT PARSED_ARGS_JS_DEST)
-        message(FATAL_ERROR "You must provide a JS_DEST argumrnt.")
-    endif()
+
+    set(JS_DEST "${CMAKE_BINARY_DIR}/gen-js-proto")
 
     process_proto_file(
         SRC ${PARSED_ARGS_SRC}
@@ -385,12 +384,12 @@ function(js_process_proto_file)
     set(COPY_PROTO_TARGET "${COPY_PROTO_TARGET}")
 
     set(output_file
-        "${PARSED_ARGS_JS_DEST}/${PROTO_REL_PATH}/${PROTO_CORE_NAME}.js")
+        "${JS_DEST}/${PROTO_REL_PATH}/${PROTO_CORE_NAME}.js")
 
     message(STATUS "  - Will generate: ${output_file}")
 
     set(library_path "${PROTO_REL_PATH}/${PROTO_CORE_NAME}")
-    set(binary_path "${CMAKE_CURRENT_SOURCE_DIR}/${PARSED_ARGS_JS_DEST}")
+    set(binary_path "${CMAKE_CURRENT_SOURCE_DIR}/${JS_DEST}")
     add_custom_command(
       OUTPUT ${output_file}
       COMMAND protoc
