@@ -96,7 +96,7 @@ function(git_fetch_content_v2)
     cmake_parse_arguments(
         PARSED_ARGS
         ""
-        "NAME;URL;VERSION;CMAKE_DIR"
+        "NAME;URL;VERSION;CMAKE_DIR;PATCH"
         ""
         ${ARGN}
     )
@@ -120,6 +120,13 @@ function(git_fetch_content_v2)
     FetchContent_GetProperties(${PARSED_ARGS_NAME})
     if(NOT ${PARSED_ARGS_NAME}_POPULATED)
         FetchContent_Populate(${PARSED_ARGS_NAME})
+
+        if (PARSED_ARGS_PATCH)
+            execute_process(
+                COMMAND ${GIT_EXECUTABLE} apply ${PARSED_ARGS_PATCH}
+                WORKING_DIRECTORY ${${{PARSED_ARGS_NAME}_SOURCE_DIR}})
+        endif()
+
         if (EXISTS "${${PARSED_ARGS_NAME}_SOURCE_DIR}/${PARSED_ARGS_CMAKE_DIR}/CMakeLists.txt")
             add_subdirectory(
                 ${${PARSED_ARGS_NAME}_SOURCE_DIR}/${PARSED_ARGS_CMAKE_DIR}
