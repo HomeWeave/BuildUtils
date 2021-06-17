@@ -124,7 +124,7 @@ function(git_fetch_content_v2)
         if (PARSED_ARGS_PATCH)
             execute_process(
                 COMMAND ${GIT_EXECUTABLE} apply ${PARSED_ARGS_PATCH}
-                WORKING_DIRECTORY ${${{PARSED_ARGS_NAME}_SOURCE_DIR}})
+                WORKING_DIRECTORY ${${PARSED_ARGS_NAME}_SOURCE_DIR})
         endif()
 
         if (EXISTS "${${PARSED_ARGS_NAME}_SOURCE_DIR}/${PARSED_ARGS_CMAKE_DIR}/CMakeLists.txt")
