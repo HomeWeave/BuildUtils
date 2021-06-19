@@ -284,7 +284,7 @@ function(cc_process_proto_file)
         ${PARSED_ARGS_TARGET}_cc_genfiles_target
         ${COPY_PROTO_TARGET})
 
-    add_library(${PARSED_ARGS_TARGET} STATIC ${output_files})
+    add_library(${PARSED_ARGS_TARGET} STATIC EXCLUDE_FROM_ALL ${output_files})
     target_include_directories(${PARSED_ARGS_TARGET} PUBLIC ${CC_GEN_ROOT_DIR})
     target_link_libraries(${PARSED_ARGS_TARGET} libprotobuf)
     set_property(TARGET ${PARSED_ARGS_TARGET}
@@ -464,7 +464,7 @@ function(embed_resource)
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
         DEPENDS ${PARSED_ARGS_SOURCES} ${CMAKE_BINARY_DIR}/embed.py)
 
-    add_library(${PARSED_ARGS_TARGET} STATIC
+    add_library(${PARSED_ARGS_TARGET} STATIC EXCLUDE_FROM_ALL
                 "${OUT_DIR}/${PARSED_ARGS_TARGET}.cc")
     target_include_directories(${PARSED_ARGS_TARGET} PUBLIC ${INCLUDE_DIR})
 
