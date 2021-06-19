@@ -462,7 +462,7 @@ function(embed_resource)
                 "${PARSED_ARGS_BASE_DIR}"
                 ${PARSED_ARGS_SOURCES}
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-        DEPENDS ${PARSED_ARGS_SOURCES} ${CMAKE_BINARY_DIR}/embed.py)
+        DEPENDS ${PARSED_ARGS_SOURCES})
 
     add_library(${PARSED_ARGS_TARGET} STATIC EXCLUDE_FROM_ALL
                 "${OUT_DIR}/${PARSED_ARGS_TARGET}.cc")
