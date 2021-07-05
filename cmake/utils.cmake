@@ -462,14 +462,10 @@ function(embed_resource)
                 "${PARSED_ARGS_BASE_DIR}"
                 ${PARSED_ARGS_SOURCES}
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-        DEPENDS ${PARSED_ARGS_SOURCES})
+        DEPENDS ${PARSED_ARGS_SOURCES} ${PARSED_ARGS_DEPENDS})
 
     add_library(${PARSED_ARGS_TARGET} STATIC EXCLUDE_FROM_ALL
                 "${OUT_DIR}/${PARSED_ARGS_TARGET}.cc")
     target_include_directories(${PARSED_ARGS_TARGET} PUBLIC ${INCLUDE_DIR})
-
-    foreach(dep IN ITEMS ${PARSED_ARGS_DEPENDS})
-        add_dependencies(${PARSED_ARGS_TARGET} ${dep})
-    endforeach()
 endfunction()
 
