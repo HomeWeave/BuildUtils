@@ -469,3 +469,25 @@ function(embed_resource)
     target_include_directories(${PARSED_ARGS_TARGET} PUBLIC ${INCLUDE_DIR})
 endfunction()
 
+function(anton_plugin)
+    cmake_parse_arguments(
+        PARSED_ARGS
+        ""
+        "SOURCES;DEPENDS"
+        ""
+        ${ARGN}
+    )
+    if(NOT PARSED_ARGS_SOURCES)
+        message(FATAL_ERROR "No sources provided.")
+    endif()
+
+    add_library(${PROJECT_NAME} SHARED ${SOURCES})
+    target_link_libraries(${PROJECT_NAME} PUBLIC anton)
+
+    foreach(dep IN ITEMS ${PARSED_ARGS_DEPENDS})
+        target_link_libraries(${PROJECT_NAME} PUBLIC ${dep})
+    endforeach()
+
+    target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_17)
+    target_compile_features(antonenv PUBLIC cxx_std_17)
+endfunction()
