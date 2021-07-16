@@ -481,7 +481,7 @@ function(anton_plugin)
         message(FATAL_ERROR "No sources provided.")
     endif()
 
-    add_library(${PROJECT_NAME} SHARED ${SOURCES})
+    add_library(${PROJECT_NAME} SHARED ${PARSED_ARGS_SOURCES})
     target_link_libraries(${PROJECT_NAME} PUBLIC anton)
 
     foreach(dep IN ITEMS ${PARSED_ARGS_DEPENDS})
