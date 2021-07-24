@@ -255,14 +255,18 @@ function(cc_process_proto_file)
 
     set(GRPC_PARAM "")
     if(PROTO_SERVICES)
-        list(APPEND output_files
-             "${CC_GEN_ROOT_DIR}/${PROTO_REL_PATH}/${PROTO_CORE_NAME}.grpc.pb.cc"
-             "${CC_GEN_ROOT_DIR}/${PROTO_REL_PATH}/${PROTO_CORE_NAME}.grpc.pb.h")
-        list(APPEND proto_srcs
-             "${CC_GEN_ROOT_DIR}/${PROTO_REL_PATH}/${PROTO_CORE_NAME}.grpc.pb.cc")
+        if (TARGET grpc_cpp_plugin)
+            list(APPEND output_files
+                 "${CC_GEN_ROOT_DIR}/${PROTO_REL_PATH}/${PROTO_CORE_NAME}.grpc.pb.cc"
+                 "${CC_GEN_ROOT_DIR}/${PROTO_REL_PATH}/${PROTO_CORE_NAME}.grpc.pb.h")
+            list(APPEND proto_srcs
+                 "${CC_GEN_ROOT_DIR}/${PROTO_REL_PATH}/${PROTO_CORE_NAME}.grpc.pb.cc")
 
-        set(GRPC_PARAM --plugin=protoc-gen-grpc=$<TARGET_FILE:grpc_cpp_plugin>)
-        set(GRPC_PARAM ${GRPC_PARAM} --grpc_out ${CC_GEN_ROOT_DIR})
+            set(GRPC_PARAM --plugin=protoc-gen-grpc=$<TARGET_FILE:grpc_cpp_plugin>)
+            set(GRPC_PARAM ${GRPC_PARAM} --grpc_out ${CC_GEN_ROOT_DIR})
+        else()
+            message(WARNING "  No GRPC target, not generated GRPC bindings.")
+        endif()
     endif()
 
     message(STATUS "  - Will generate: ${output_files}")
@@ -295,7 +299,7 @@ function(cc_process_proto_file)
     add_dependencies(${PARSED_ARGS_TARGET}
                      ${PARSED_ARGS_TARGET}_cc_genfiles_target)
 
-    if(PROTO_SERVICES)
+    if(PROTO_SERVICES AND TARGET grpc_cpp_plugin)
         target_link_libraries(${PARSED_ARGS_TARGET} grpc++_unsecure)
         add_dependencies(${PARSED_ARGS_TARGET} grpc_cpp_plugin)
     endif()
