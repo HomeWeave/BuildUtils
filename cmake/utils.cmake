@@ -78,6 +78,32 @@ string(CONCAT EMBED_PY_CODE
 "  cc.write('\\n};\\n')\n")
 
 
+function(conditional_file_update)
+    CMakeParseArguments(
+        PARSED_ARGS
+        ""
+        "DEST;CONTENT"
+        ""
+        ${ARGN}
+    )
+    if (NOT PARSED_ARGS_DEST)
+        message(FATAL_ERROR "No DEST provided.")
+    endif()
+    if (NOT PARSED_ARGS_CONTENT)
+        message(FATAL_ERROR "No CONTENT provided.")
+    endif()
+
+    set(TEMP_FILE_PATH ${CMAKE_BINARY_DIR}/conditional_write)
+    file(WRITE ${TEMP_FILE_PATH} "${PARSED_ARGS_CONTENT}")
+    file(SHA256 NEW_HASH "${TEMP_FILE_PATH}")
+
+    file(SHA256 OLD_HASH "${PARSED_ARGS_DEST}")
+
+    if (NOT "${OLD_HASH}" STREQUAL "${NEW_HASH}")
+        file(WRITE ${PARSED_ARGS_DEST} "${PARSED_ARGS_CONTENT}")
+    endif()
+endfunction()
+
 function(git_fetch_content name git_repo git_tag)
     set(FETCHCONTENT_QUIET OFF)
     FetchContent_Declare(${name} GIT_REPOSITORY "${git_repo}"
