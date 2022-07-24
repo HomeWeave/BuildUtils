@@ -805,7 +805,7 @@ function(process_proto_file_v2)
             PROTO_DEPS        ${dependencies})
         set(TS_PROTO_OUTPUT_FILE ${OUTPUT_FILE} PARENT_SCOPE)
         set(TS_PROTO_TARGET ${GENFILES_TARGET} PARENT_SCOPE)
-        set(TS_PROTO_ROOT_DIR ${PY_PROTO_ROOT_DIR} PARENT_SCOPE)
+        set(TS_PROTO_ROOT_DIR ${TS_PROTO_ROOT_DIR} PARENT_SCOPE)
     endif()
 endfunction()
 
