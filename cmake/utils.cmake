@@ -163,7 +163,7 @@ function(git_fetch_content_v2)
         PARENT_SCOPE)
 
     # Custom exports.
-    if(defined ANTON_SUBPROJECT_VAR_EXPORTS)
+    if(DEFINED ANTON_SUBPROJECT_VAR_EXPORTS)
         foreach(var IN ITEMS ${ANTON_SUBPROJECT_VAR_EXPORTS})
             set(${var} "${${var}}" PARENT_SCOPE)
         endforeach()
