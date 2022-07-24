@@ -161,6 +161,13 @@ function(git_fetch_content_v2)
     endif()
     set(${PARSED_ARGS_NAME}_SOURCE_DIR ${${PARSED_ARGS_NAME}_SOURCE_DIR}
         PARENT_SCOPE)
+
+    # Custom exports.
+    if(defined ANTON_SUBPROJECT_VAR_EXPORTS)
+        foreach(var IN ITEMS ${ANTON_SUBPROJECT_VAR_EXPORTS})
+            set(${var} "${${var}}" PARENT_SCOPE)
+        endforeach()
+    endif()
 endfunction()
 
 
