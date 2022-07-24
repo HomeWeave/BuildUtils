@@ -494,7 +494,7 @@ function(internal_process_cc_proto)
     set(PROTO_CORE_NAME "${PARSED_ARGS_SRC_CORE_NAME}")
     set(PROTO_SERVICES "${SERVICES}")
     set(COPY_PROTO_TARGET "${PARSED_ARGS_PROTO_COPY_TARGET}")
-    set(CC_GEN_ROOT_DIR "${PARSED_ARGS_OUTPUT_BASE")
+    set(CC_GEN_ROOT_DIR "${PARSED_ARGS_OUTPUT_BASE}")
 
     internal_proto_path_to_target(
         "${PARSED_ARGS_SRC_REL_PATH}/${PARSED_ARGS_CORE_NAME}.proto")
