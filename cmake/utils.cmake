@@ -564,6 +564,70 @@ function(internal_process_cc_proto)
     set(CC_LIB_TARGET ${CC_LIB_TARGET} PARENT_SCOPE)
 endfunction()
 
+function(internal_process_py_proto)
+    cmake_parse_arguments(
+        PARSED_ARGS
+        ""
+        "SRC_BASE_PATH;SRC_REL_PATH;SRC_CORE_NAME;OUTPUT_BASE;PROTO_COPY_TARGET"
+        "PROTO_DEPS"
+        ${ARGN}
+    )
+    if(NOT PARSED_ARGS_OUTPUT_BASE)
+        message(FATAL_ERROR "You must provide a OUTPUT_BASE arg.")
+    endif()
+    if(NOT PARSED_ARGS_SRC_REL_PATH)
+        message(FATAL_ERROR "You must provide a SRC_REL_PATH arg.")
+    endif()
+    if(NOT PARSED_ARGS_SRC_CORE_NAME)
+        message(FATAL_ERROR "You must provide a SRC_CORE_NAME arg.")
+    endif()
+    if(NOT PARSED_ARGS_SRC_BASE_PATH)
+        message(FATAL_ERROR "You must provide a SRC_BASE_PATH arg.")
+    endif()
+    if(NOT PARSED_ARGS_PROTO_COPY_TARGET)
+        message(FATAL_ERROR "You must provide a PROTO_COPY_TARGET arg.")
+    endif()
+
+    set(PROTO_ROOT_DIR "${PARSED_ARGS_OUTPUT_BASE}")
+    set(PROTO_REL_PATH "${PARSED_ARGS_SRC_REL_PATH}")
+    string(CONCAT INPUT_PROTO_FILE
+           "${PARSED_ARGS_SRC_BASE_PATH}/"
+           "${PARSED_ARGS_SRC_REL_PATH}/"
+           "${PARSED_ARGS_SRC_CORE_NAME}.proto")
+    set(PROTO_CORE_NAME "${PARSED_ARGS_SRC_CORE_NAME}")
+    set(COPY_PROTO_TARGET "${PARSED_ARGS_PROTO_COPY_TARGET}")
+    set(PY_GEN_ROOT_DIR "${PARSED_ARGS_OUTPUT_BASE}")
+    set(OUTPUT_FILE
+        "${PY_GEN_ROOT_DIR}/${PROTO_REL_PATH}/${PROTO_CORE_NAME}_pb2.py")
+
+    internal_proto_path_to_target(
+        "${PARSED_ARGS_SRC_REL_PATH}/${PARSED_ARGS_CORE_NAME}.proto")
+    set(PY_TARGET ${PROTO_TARGET})
+
+    file(MAKE_DIRECTORY ${PY_GEN_ROOT_DIR})
+
+    message(STATUS "  - Will generate: ${OUTPUT_FILE}")
+
+    add_custom_command(
+      OUTPUT ${OUTPUT_FILE}
+      COMMAND $<TARGET_FILE:protoc>
+           --python_out "${PY_GEN_ROOT_DIR}"
+           -I "${PROTO_ROOT_DIR}"
+           "${INPUT_PROTO_FILE}"
+      WORKING_DIRECTORY "${PROTO_ROOT_DIR}"
+      DEPENDS "${INPUT_PROTO_FILE}"
+    )
+
+    add_custom_target(${PY_TARGET}_py_genfiles_target
+                      DEPENDS ${OUTPUT_FILE})
+    add_dependencies(${PY_TARGET}_py_genfiles_target protoc)
+    add_dependencies(${PY_TARGET}_py_genfiles_target ${COPY_PROTO_TARGET})
+
+    set(GENFILES_TARGET "${PY_TARGET}_py_genfiles_target" PARENT_SCOPE)
+    set(PY_PROTO_ROOT_DIR "${PY_GEN_ROOT_DIR}" PARENT_SCOPE)
+    set(OUTPUT_FILE "${OUTPUT_FILE}" PARENT_SCOPE)
+endfunction()
+
 function(process_proto_file_v2)
     cmake_parse_arguments(
         PARSED_ARGS
@@ -636,6 +700,18 @@ function(process_proto_file_v2)
             HAS_SERVICES      "${services}"
             PROTO_DEPS        ${dependencies})
         set(CC_LIB_TARGET ${CC_LIB_TARGET} PARENT_SCOPE)
+    endif()
+    if (PARSED_ARGS_ENABLE_PY)
+        internal_process_py_proto(
+            SRC_BASE_PATH     "${CMAKE_BINARY_DIR}/gen-proto"
+            SRC_REL_PATH      "${rel_path}"
+            SRC_CORE_NAME     "${proto_file_name}"
+            OUTPUT_BASE       "${CMAKE_BINARY_DIR}/gen-py-proto"
+            PROTO_COPY_TARGET "${PROTO_TARGET}_proto_genfiles_target"
+            PROTO_DEPS        ${dependencies})
+        set(PY_PROTO_OUTPUT_FILE ${OUTPUT_FILE} PARENT_SCOPE)
+        set(PY_PROTO_TARGET ${GENFILES_TARGET} PARENT_SCOPE)
+        set(PY_PROTO_ROOT_DIR ${PY_PROTO_ROOT_DIR} PARENT_SCOPE)
     endif()
 endfunction()
 
