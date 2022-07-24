@@ -508,8 +508,6 @@ function(internal_process_cc_proto)
     list(APPEND proto_srcs
         "${CC_GEN_ROOT_DIR}/${PROTO_REL_PATH}/${PROTO_CORE_NAME}.pb.cc")
 
-    message(STATUS "  - Services: ${PROTO_SERVICES}")
-
     set(GRPC_PARAM "")
     if(PARSED_ARGS_HAS_SERVICES)
         if (TARGET grpc_cpp_plugin)
@@ -539,7 +537,7 @@ function(internal_process_cc_proto)
       DEPENDS "${INPUT_PROTO_FILE}"
     )
     add_custom_target(
-        ${CC_TARGET}_cc_genfiles_target
+        ${CC_LIB_TARGET}_cc_genfiles_target
         DEPENDS ${output_files})
     add_dependencies(
         ${CC_LIB_TARGET}_cc_genfiles_target
@@ -592,10 +590,13 @@ function(process_proto_file_v2)
             list(APPEND dependencies "${CMAKE_MATCH_1}")
         endif()
     endforeach()
+    message(STATUS "  - Dependencies: ${dependencies}")
 
     # Check if there are RPC services.
     string(REGEX MATCH "service [a-zA-Z0-9]+ *{" services
            "${proto_file_content}")
+
+    message(STATUS "  - Services: ${services}")
 
     get_filename_component(proto_file_name "${PARSED_ARGS_SRC}" NAME_WE)
     get_filename_component(rel_path "${PARSED_ARGS_DEST}" DIRECTORY)
@@ -630,7 +631,7 @@ function(process_proto_file_v2)
             SRC_BASE_PATH     "${CMAKE_BINARY_DIR}/gen-proto"
             SRC_REL_PATH      "${rel_path}"
             SRC_CORE_NAME     "${proto_file_name}"
-            OUTPUT_BASE       "{CMAKE_BINARY_DIR}/gen-cc-proto"
+            OUTPUT_BASE       "${CMAKE_BINARY_DIR}/gen-cc-proto"
             PROTO_COPY_TARGET "${PROTO_TARGET}_proto_genfiles_target"
             HAS_SERVICES      "${services}"
             PROTO_DEPS        ${dependencies})
