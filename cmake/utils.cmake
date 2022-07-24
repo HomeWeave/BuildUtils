@@ -595,7 +595,7 @@ function(internal_process_py_proto)
         message(FATAL_ERROR "You must provide a PROTO_COPY_TARGET arg.")
     endif()
 
-    set(PROTO_ROOT_DIR "${PARSED_ARGS_OUTPUT_BASE}")
+    set(PROTO_ROOT_DIR "${PARSED_ARGS_SRC_BASE_PATH}")
     set(PROTO_REL_PATH "${PARSED_ARGS_SRC_REL_PATH}")
     string(CONCAT INPUT_PROTO_FILE
            "${PARSED_ARGS_SRC_BASE_PATH}/"
@@ -662,7 +662,7 @@ function(internal_process_ts_proto)
         message(FATAL_ERROR "You must provide a TS_PLUGIN arg.")
     endif()
 
-    set(PROTO_ROOT_DIR "${PARSED_ARGS_OUTPUT_BASE}")
+    set(PROTO_ROOT_DIR "${PARSED_ARGS_SRC_BASE_PATH}")
     set(PROTO_REL_PATH "${PARSED_ARGS_SRC_REL_PATH}")
     string(CONCAT INPUT_PROTO_FILE
            "${PARSED_ARGS_SRC_BASE_PATH}/"
@@ -699,7 +699,7 @@ function(internal_process_ts_proto)
     add_dependencies(${TS_TARGET}_ts_genfiles_target ${COPY_PROTO_TARGET})
 
     set(GENFILES_TARGET "${TS_TARGET}_ts_genfiles_target" PARENT_SCOPE)
-    set(PY_PROTO_ROOT_DIR "${TS_GEN_ROOT_DIR}" PARENT_SCOPE)
+    set(TS_PROTO_ROOT_DIR "${TS_GEN_ROOT_DIR}" PARENT_SCOPE)
     set(OUTPUT_FILE "${OUTPUT_FILE}" PARENT_SCOPE)
 endfunction()
 
@@ -771,7 +771,7 @@ function(process_proto_file_v2)
             SRC_REL_PATH      "${rel_path}"
             SRC_CORE_NAME     "${proto_file_name}"
             OUTPUT_BASE       "${CMAKE_BINARY_DIR}/gen-cc-proto"
-            PROTO_COPY_TARGET "${PROTO_TARGET}_proto_genfiles_target"
+            PROTO_COPY_TARGET "${current_proto_gen_files_target}"
             HAS_SERVICES      "${services}"
             PROTO_DEPS        ${dependencies})
         set(CC_LIB_TARGET ${CC_LIB_TARGET} PARENT_SCOPE)
@@ -783,7 +783,7 @@ function(process_proto_file_v2)
             SRC_REL_PATH      "${rel_path}"
             SRC_CORE_NAME     "${proto_file_name}"
             OUTPUT_BASE       "${CMAKE_BINARY_DIR}/gen-py-proto"
-            PROTO_COPY_TARGET "${PROTO_TARGET}_proto_genfiles_target"
+            PROTO_COPY_TARGET "${current_proto_gen_files_target}"
             PROTO_DEPS        ${dependencies})
         set(PY_PROTO_OUTPUT_FILE ${OUTPUT_FILE} PARENT_SCOPE)
         set(PY_PROTO_TARGET ${GENFILES_TARGET} PARENT_SCOPE)
@@ -800,7 +800,7 @@ function(process_proto_file_v2)
             SRC_REL_PATH      "${rel_path}"
             SRC_CORE_NAME     "${proto_file_name}"
             OUTPUT_BASE       "${CMAKE_BINARY_DIR}/gen-ts-proto"
-            PROTO_COPY_TARGET "${PROTO_TARGET}_proto_genfiles_target"
+            PROTO_COPY_TARGET "${current_proto_gen_files_target}"
             TS_PLUGIN         "${PARSED_ARGS_TS_PLUGIN}"
             PROTO_DEPS        ${dependencies})
         set(TS_PROTO_OUTPUT_FILE ${OUTPUT_FILE} PARENT_SCOPE)
