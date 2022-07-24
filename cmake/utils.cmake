@@ -456,6 +456,175 @@ function(js_process_proto_file)
     set(JS_PROTO_BASE_DIR ${JS_DEST} PARENT_SCOPE)
 endfunction()
 
+function(internal_proto_path_to_target path)
+    string(REGEX REPLACE "[^a-zA-Z0-9]" "_" TARGET ${PARSED_ARGS_DEST})
+    set(PROTO_TARGET "${TARGET}" PARENT_SCOPE)
+endfunction()
+
+function(internal_process_cc_proto)
+    cmake_parse_arguments(
+        PARSED_ARGS
+        ""
+        "SRC_BASE_PATH;SRC_REL_PATH;SRC_CORE_NAME;OUTPUT_BASE;PROTO_COPY_TARGET;HAS_SERVICES"
+        "PROTO_DEPS"
+        ${ARGN}
+    )
+    if(NOT PARSED_ARGS_OUTPUT_BASE)
+        message(FATAL_ERROR "You must provide a OUTPUT_BASE arg.")
+    endif()
+    if(NOT PARSED_ARGS_SRC_REL_PATH)
+        message(FATAL_ERROR "You must provide a SRC_REL_PATH arg.")
+    endif()
+    if(NOT PARSED_ARGS_SRC_CORE_NAME)
+        message(FATAL_ERROR "You must provide a SRC_CORE_NAME arg.")
+    endif()
+    if(NOT PARSED_ARGS_SRC_BASE_PATH)
+        message(FATAL_ERROR "You must provide a SRC_BASE_PATH arg.")
+    endif()
+    if(NOT PARSED_ARGS_PROTO_COPY_TARGET)
+        message(FATAL_ERROR "You must provide a PROTO_COPY_TARGET arg.")
+    endif()
+
+    set(PROTO_ROOT_DIR "${PARSED_ARGS_SRC_BASE_PATH}")
+    set(PROTO_REL_PATH "${PARSED_ARGS_SRC_REL_PATH}")
+    string(CONCAT INPUT_PROTO_FILE
+           "${PARSED_ARGS_SRC_BASE_PATH}/"
+           "${PARSED_ARGS_SRC_REL_PATH}/"
+           "${PARSED_ARGS_SRC_CORE_NAME}.proto")
+    set(PROTO_CORE_NAME "${PARSED_ARGS_SRC_CORE_NAME}")
+    set(PROTO_SERVICES "${SERVICES}")
+    set(COPY_PROTO_TARGET "${PARSED_ARGS_PROTO_COPY_TARGET}")
+    set(CC_GEN_ROOT_DIR "${PARSED_ARGS_OUTPUT_BASE")
+
+    internal_proto_path_to_target(
+        "${PARSED_ARGS_SRC_REL_PATH}/${PARSED_ARGS_CORE_NAME}.proto")
+    set(CC_LIB_TARGET ${PROTO_TARGET})
+
+    file(MAKE_DIRECTORY ${CC_GEN_ROOT_DIR})
+
+    list(APPEND output_files
+        "${CC_GEN_ROOT_DIR}/${PROTO_REL_PATH}/${PROTO_CORE_NAME}.pb.cc"
+        "${CC_GEN_ROOT_DIR}/${PROTO_REL_PATH}/${PROTO_CORE_NAME}.pb.h")
+    list(APPEND proto_srcs
+        "${CC_GEN_ROOT_DIR}/${PROTO_REL_PATH}/${PROTO_CORE_NAME}.pb.cc")
+
+    message(STATUS "  - Services: ${PROTO_SERVICES}")
+
+    set(GRPC_PARAM "")
+    if(PARSED_ARGS_HAS_SERVICES)
+        if (TARGET grpc_cpp_plugin)
+            list(APPEND output_files
+                 "${CC_GEN_ROOT_DIR}/${PROTO_REL_PATH}/${PROTO_CORE_NAME}.grpc.pb.cc"
+                 "${CC_GEN_ROOT_DIR}/${PROTO_REL_PATH}/${PROTO_CORE_NAME}.grpc.pb.h")
+            list(APPEND proto_srcs
+                 "${CC_GEN_ROOT_DIR}/${PROTO_REL_PATH}/${PROTO_CORE_NAME}.grpc.pb.cc")
+
+            set(GRPC_PARAM --plugin=protoc-gen-grpc=$<TARGET_FILE:grpc_cpp_plugin>)
+            set(GRPC_PARAM ${GRPC_PARAM} --grpc_out ${CC_GEN_ROOT_DIR})
+        else()
+            message(WARNING "  No GRPC plugin target, did not generate GRPC bindings.")
+        endif()
+    endif()
+
+    message(STATUS "  - Will generate: ${output_files}")
+
+    add_custom_command(
+      OUTPUT ${output_files}
+      COMMAND $<TARGET_FILE:protoc>
+           --cpp_out "${CC_GEN_ROOT_DIR}"
+           -I "${PROTO_ROOT_DIR}"
+           ${GRPC_PARAM}
+           "${INPUT_PROTO_FILE}"
+      WORKING_DIRECTORY "${PROTO_ROOT_DIR}"
+      DEPENDS "${INPUT_PROTO_FILE}"
+    )
+    add_custom_target(
+        ${CC_TARGET}_cc_genfiles_target
+        DEPENDS ${output_files})
+    add_dependencies(
+        ${CC_LIB_TARGET}_cc_genfiles_target
+        ${COPY_PROTO_TARGET})
+
+    add_library(${CC_LIB_TARGET} STATIC EXCLUDE_FROM_ALL ${output_files})
+    target_include_directories(${CC_LIB_TARGET} PUBLIC ${CC_GEN_ROOT_DIR})
+    target_link_libraries(${CC_LIB_TARGET} libprotobuf)
+
+    add_dependencies(${CC_LIB_TARGET} protoc)
+    add_dependencies(${CC_LIB_TARGET} libprotobuf)
+    add_dependencies(${CC_LIB_TARGET} ${CC_LIB_TARGET}_cc_genfiles_target)
+
+    if(PROTO_SERVICES AND TARGET grpc_cpp_plugin)
+        target_link_libraries(${CC_LIB_TARGET} grpc++_unsecure)
+        add_dependencies(${CC_LIB_TARGET} grpc_cpp_plugin)
+    endif()
+
+    foreach(proto_deps IN ITEMS ${PARSED_ARGS_PROTO_DEPS})
+        internal_proto_path_to_target(${proto_deps})
+        target_link_libraries(${CC_LIB_TARGET} ${PROTO_TARGET})
+    endforeach()
+endfunction()
+
+function(process_proto_file_v2)
+    cmake_parse_arguments(
+        PARSED_ARGS
+        ""
+        "SRC;DEST;ENABLE_CC;ENABLE_PY;ENABLE_TS;TS_PLUGIN"
+        "PROTO_DEPS"  # Relative path to proto (like import statement).
+        ${ARGN}
+    )
+    if(NOT PARSED_ARGS_SRC)
+        message(FATAL_ERROR "You must provide a SRC (input file) arg.")
+    endif()
+    if (NOT PARSED_ARGS_DEST)
+        message(FATAL_ERROR "You must provide a DEST argumrnt.")
+    endif()
+
+    # Scan imports to associate as dependencies.
+    message(STATUS "Processing Proto: ${PARSED_ARGS_SRC}")
+
+    # Check if there are RPC services.
+    string(REGEX MATCH "service [a-zA-Z0-9]+ *{" services
+           "${proto_file_content}")
+
+    get_filename_component(proto_file_name "${PARSED_ARGS_SRC}" NAME_WE)
+    get_filename_component(rel_path "${PARSED_ARGS_DEST}" DIRECTORY)
+    set(out_proto_base_dir "${CMAKE_BINARY_DIR}/gen-proto")
+    set(target_copy_proto_file
+        "${out_proto_base_dir}/${rel_path}/${proto_file_name}.proto")
+    internal_proto_path_to_target("${PARSED_ARGS_DEST}") # Result: PROTO_TARGET
+
+
+    file(MAKE_DIRECTORY "${out_proto_base_dir}/${rel_path}")
+
+    add_custom_command(
+        OUTPUT ${target_copy_proto_file}
+        COMMAND ${CMAKE_COMMAND} -E copy
+                ${CMAKE_CURRENT_SOURCE_DIR}/${PARSED_ARGS_SRC}
+                ${target_copy_proto_file}
+        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/${PARSED_ARGS_SRC})
+
+    set(current_proto_gen_files_target ${PROTO_TARGET}_copy_genfiles_target)
+    add_custom_target(
+        ${current_proto_gen_files_target}
+        DEPENDS ${target_copy_proto_file})
+
+    foreach(proto_deps IN ITEMS ${PARSED_ARGS_PROTO_DEPS})
+        internal_proto_path_to_target("${proto_deps}")
+        add_dependencies(${current_proto_gen_files_target}
+                         ${PROTO_TARGET}_proto_genfiles_target)
+    endforeach()
+
+    if (PARSED_ARGS_ENABLE_CC)
+        internal_process_cc_proto(
+            SRC_BASE          "${CMAKE_BINARY_DIR}/gen-proto"
+            SRC_REL_PATH      "${rel_path}"
+            SRC_CORE_NAME     "${proto_file_name}"
+            OUTPUT_BASE       "{CMAKE_BINARY_DIR}/gen-cc-proto"
+            PROTO_COPY_TARGET "${PROTO_TARGET}_proto_genfiles_target"
+            HAS_SERVICES      "${services}")
+    endif()
+endfunction()
+
 function(embed_resource)
     cmake_parse_arguments(
         PARSED_ARGS
