@@ -791,7 +791,7 @@ function(process_proto_file_v2)
     endif()
 
     if (PARSED_ARGS_ENABLE_TS)
-        if (not PARSED_ARGS_TS_PLUGIN)
+        if (NOT DEFINED PARSED_ARGS_TS_PLUGIN)
             message(FATAL_ERROR "You must provide a TS_PLUGIN arg.")
         endif()
 
