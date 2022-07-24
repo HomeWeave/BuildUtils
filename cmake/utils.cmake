@@ -627,7 +627,7 @@ function(process_proto_file_v2)
 
     if (PARSED_ARGS_ENABLE_CC)
         internal_process_cc_proto(
-            SRC_BASE          "${CMAKE_BINARY_DIR}/gen-proto"
+            SRC_BASE_PATH     "${CMAKE_BINARY_DIR}/gen-proto"
             SRC_REL_PATH      "${rel_path}"
             SRC_CORE_NAME     "${proto_file_name}"
             OUTPUT_BASE       "{CMAKE_BINARY_DIR}/gen-cc-proto"
