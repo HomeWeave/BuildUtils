@@ -583,6 +583,15 @@ function(process_proto_file_v2)
 
     # Scan imports to associate as dependencies.
     message(STATUS "Processing Proto: ${PARSED_ARGS_SRC}")
+    file(READ "${PARSED_ARGS_SRC}" proto_file_content)
+    string(REPLACE ";" "SEMI-COLON" proto_file_lines "${proto_file_content}")
+    string(REPLACE "\n" ";" proto_file_lines "${proto_file_lines}")
+    foreach(line in LISTS ${proto_file_lines})
+        string(REGEX MATCH "import *\"([^\"]+)\"" match "${line}")
+        if (match)
+            list(APPEND dependencies "${CMAKE_MATCH_1}")
+        endif()
+    endforeach()
 
     # Check if there are RPC services.
     string(REGEX MATCH "service [a-zA-Z0-9]+ *{" services
@@ -623,7 +632,8 @@ function(process_proto_file_v2)
             SRC_CORE_NAME     "${proto_file_name}"
             OUTPUT_BASE       "{CMAKE_BINARY_DIR}/gen-cc-proto"
             PROTO_COPY_TARGET "${PROTO_TARGET}_proto_genfiles_target"
-            HAS_SERVICES      "${services}")
+            HAS_SERVICES      "${services}"
+            PROTO_DEPS        ${dependencies})
         set(CC_LIB_TARGET ${CC_LIB_TARGET} PARENT_SCOPE)
     endif()
 endfunction()
