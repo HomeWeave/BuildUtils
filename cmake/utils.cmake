@@ -562,6 +562,8 @@ function(internal_process_cc_proto)
         internal_proto_path_to_target(${proto_deps})
         target_link_libraries(${CC_LIB_TARGET} ${PROTO_TARGET})
     endforeach()
+
+    set(CC_LIB_TARGET ${CC_LIB_TARGET} PARENT_SCOPE)
 endfunction()
 
 function(process_proto_file_v2)
@@ -622,6 +624,7 @@ function(process_proto_file_v2)
             OUTPUT_BASE       "{CMAKE_BINARY_DIR}/gen-cc-proto"
             PROTO_COPY_TARGET "${PROTO_TARGET}_proto_genfiles_target"
             HAS_SERVICES      "${services}")
+        set(CC_LIB_TARGET ${CC_LIB_TARGET} PARENT_SCOPE)
     endif()
 endfunction()
 
