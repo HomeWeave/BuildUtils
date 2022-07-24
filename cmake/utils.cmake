@@ -569,8 +569,8 @@ endfunction()
 function(process_proto_file_v2)
     cmake_parse_arguments(
         PARSED_ARGS
-        ""
-        "SRC;DEST;ENABLE_CC;ENABLE_PY;ENABLE_TS;TS_PLUGIN"
+        "ENABLE_CC;ENABLE_TS;ENABLE_PY"
+        "SRC;DEST;TS_PLUGIN"
         "PROTO_DEPS"  # Relative path to proto (like import statement).
         ${ARGN}
     )
