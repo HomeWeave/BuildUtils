@@ -464,7 +464,7 @@ function(js_process_proto_file)
 endfunction()
 
 function(internal_proto_path_to_target path)
-    string(REGEX REPLACE "[^a-zA-Z0-9]" "_" TARGET ${PARSED_ARGS_DEST})
+    string(REGEX REPLACE "[^a-zA-Z0-9]" "_" TARGET ${path})
     set(PROTO_TARGET "${TARGET}" PARENT_SCOPE)
 endfunction()
 
@@ -503,8 +503,7 @@ function(internal_process_cc_proto)
     set(COPY_PROTO_TARGET "${PARSED_ARGS_PROTO_COPY_TARGET}")
     set(CC_GEN_ROOT_DIR "${PARSED_ARGS_OUTPUT_BASE}")
 
-    internal_proto_path_to_target(
-        "${PARSED_ARGS_SRC_REL_PATH}/${PARSED_ARGS_CORE_NAME}.proto")
+    internal_proto_path_to_target("${PROTO_REL_PATH}/${PROTO_CORE_NAME}.proto")
     set(CC_LIB_TARGET ${PROTO_TARGET})
 
     file(MAKE_DIRECTORY ${CC_GEN_ROOT_DIR})
@@ -607,8 +606,7 @@ function(internal_process_py_proto)
     set(OUTPUT_FILE
         "${PY_GEN_ROOT_DIR}/${PROTO_REL_PATH}/${PROTO_CORE_NAME}_pb2.py")
 
-    internal_proto_path_to_target(
-        "${PARSED_ARGS_SRC_REL_PATH}/${PARSED_ARGS_CORE_NAME}.proto")
+    internal_proto_path_to_target("${PROTO_REL_PATH}/${PROTO_CORE_NAME}.proto")
     set(PY_TARGET ${PROTO_TARGET})
 
     file(MAKE_DIRECTORY ${PY_GEN_ROOT_DIR})
@@ -674,8 +672,7 @@ function(internal_process_ts_proto)
     set(OUTPUT_FILE
         "${TS_GEN_ROOT_DIR}/${PROTO_REL_PATH}/${PROTO_CORE_NAME}.ts")
 
-    internal_proto_path_to_target(
-        "${PARSED_ARGS_SRC_REL_PATH}/${PARSED_ARGS_CORE_NAME}.proto")
+    internal_proto_path_to_target("${PROTO_REL_PATH}/${PROTO_CORE_NAME}.proto")
     set(TS_TARGET ${PROTO_TARGET})
 
     file(MAKE_DIRECTORY ${TS_GEN_ROOT_DIR})
@@ -709,7 +706,7 @@ function(process_proto_file_v2)
         PARSED_ARGS
         "ENABLE_CC;ENABLE_TS;ENABLE_PY"
         "SRC;DEST;TS_PLUGIN"
-        "PROTO_DEPS"  # Relative path to proto (like import statement).
+        ""
         ${ARGN}
     )
     if(NOT PARSED_ARGS_SRC)
@@ -760,7 +757,7 @@ function(process_proto_file_v2)
         ${current_proto_gen_files_target}
         DEPENDS ${target_copy_proto_file})
 
-    foreach(proto_deps IN ITEMS ${PARSED_ARGS_PROTO_DEPS})
+    foreach(proto_deps IN ITEMS ${dependencies})
         internal_proto_path_to_target("${proto_deps}")
         add_dependencies(${current_proto_gen_files_target}
                          ${PROTO_TARGET}_proto_genfiles_target)
@@ -875,3 +872,4 @@ function(anton_plugin)
     target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_17)
     set_target_properties(${PROJECT_NAME} PROPERTIES CXX_STANDARD 17)
 endfunction()
+
