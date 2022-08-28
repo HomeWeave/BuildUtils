@@ -760,7 +760,7 @@ function(process_proto_file_v2)
     foreach(proto_deps IN ITEMS ${dependencies})
         internal_proto_path_to_target("${proto_deps}")
         add_dependencies(${current_proto_gen_files_target}
-                         ${PROTO_TARGET}_proto_genfiles_target)
+                         ${PROTO_TARGET}_copy_genfiles_target)
     endforeach()
 
     if (PARSED_ARGS_ENABLE_CC)
