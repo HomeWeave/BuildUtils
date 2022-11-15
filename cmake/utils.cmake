@@ -499,7 +499,7 @@ function(internal_process_cc_proto)
            "${PARSED_ARGS_SRC_REL_PATH}/"
            "${PARSED_ARGS_SRC_CORE_NAME}.proto")
     set(PROTO_CORE_NAME "${PARSED_ARGS_SRC_CORE_NAME}")
-    set(PROTO_SERVICES "${SERVICES}")
+    set(PROTO_SERVICES "${PARSED_ARGS_HAS_SERVICES}")
     set(COPY_PROTO_TARGET "${PARSED_ARGS_PROTO_COPY_TARGET}")
     set(CC_GEN_ROOT_DIR "${PARSED_ARGS_OUTPUT_BASE}")
 
@@ -515,7 +515,7 @@ function(internal_process_cc_proto)
         "${CC_GEN_ROOT_DIR}/${PROTO_REL_PATH}/${PROTO_CORE_NAME}.pb.cc")
 
     set(GRPC_PARAM "")
-    if(PARSED_ARGS_HAS_SERVICES)
+    if(PROTO_SERVICES)
         if (TARGET grpc_cpp_plugin)
             list(APPEND output_files
                  "${CC_GEN_ROOT_DIR}/${PROTO_REL_PATH}/${PROTO_CORE_NAME}.grpc.pb.cc"
@@ -706,7 +706,7 @@ function(process_proto_file_v2)
         PARSED_ARGS
         "ENABLE_CC;ENABLE_TS;ENABLE_PY"
         "SRC;DEST;TS_PLUGIN"
-        ""
+        ""  # Relative path to proto (like import statement).
         ${ARGN}
     )
     if(NOT PARSED_ARGS_SRC)
