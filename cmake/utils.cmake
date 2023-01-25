@@ -683,7 +683,7 @@ function(internal_process_ts_proto)
       OUTPUT ${OUTPUT_FILE}
       COMMAND $<TARGET_FILE:protoc>
            --plugin "${PARSED_ARGS_TS_PLUGIN}"
-           --ts_proto_opt=esModuleInterop=true,exportCommonSymbols=false,oneof=unions
+           --ts_proto_opt=esModuleInterop=true,exportCommonSymbols=false,oneof=unions,outputTypeRegistry=true
            --ts_proto_out "${TS_GEN_ROOT_DIR}"
            -I "${PROTO_ROOT_DIR}"
            "${INPUT_PROTO_FILE}"
