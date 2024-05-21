@@ -530,6 +530,12 @@ function(internal_process_cc_proto)
         endif()
     endif()
 
+    FetchContent_GetProperties(protobuf)  # Assume it's called protobuf.
+    if(NOT protobuf_POPULATED)
+      message(FATAL "Unable to locate protobuf dependency.")
+    endif()
+    set(PB_SRC ${protobuf_SOURCE_DIR})
+
     message(STATUS "  - Will generate: ${output_files}")
 
     add_custom_command(
@@ -537,6 +543,7 @@ function(internal_process_cc_proto)
       COMMAND $<TARGET_FILE:protoc>
            --cpp_out "${CC_GEN_ROOT_DIR}"
            -I "${PROTO_ROOT_DIR}"
+           -I "${PB_SRC}/src"
            ${GRPC_PARAM}
            "${INPUT_PROTO_FILE}"
       WORKING_DIRECTORY "${PROTO_ROOT_DIR}"
@@ -723,7 +730,7 @@ function(process_proto_file_v2)
     string(REPLACE "\n" ";" proto_file_lines "${proto_file_lines}")
     foreach(line in LISTS ${proto_file_lines})
         string(REGEX MATCH "import *\"([^\"]+)\"" match "${line}")
-        if (match)
+        if (match AND NOT match MATCHES ".*google/protobuf.*")
             list(APPEND dependencies "${CMAKE_MATCH_1}")
         endif()
     endforeach()
