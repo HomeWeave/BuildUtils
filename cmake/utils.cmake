@@ -618,6 +618,12 @@ function(internal_process_py_proto)
 
     file(MAKE_DIRECTORY ${PY_GEN_ROOT_DIR})
 
+    FetchContent_GetProperties(protobuf)  # Assume it's called protobuf.
+    if(NOT protobuf_POPULATED)
+      message(FATAL "Unable to locate protobuf dependency.")
+    endif()
+    set(PB_SRC ${protobuf_SOURCE_DIR})
+
     message(STATUS "  - Will generate: ${OUTPUT_FILE}")
 
     add_custom_command(
@@ -625,6 +631,7 @@ function(internal_process_py_proto)
       COMMAND $<TARGET_FILE:protoc>
            --python_out "${PY_GEN_ROOT_DIR}"
            -I "${PROTO_ROOT_DIR}"
+           -I "${PB_SRC}/src"
            "${INPUT_PROTO_FILE}"
       WORKING_DIRECTORY "${PROTO_ROOT_DIR}"
       DEPENDS "${INPUT_PROTO_FILE}"
@@ -684,6 +691,12 @@ function(internal_process_ts_proto)
 
     file(MAKE_DIRECTORY ${TS_GEN_ROOT_DIR})
 
+    FetchContent_GetProperties(protobuf)  # Assume it's called protobuf.
+    if(NOT protobuf_POPULATED)
+      message(FATAL "Unable to locate protobuf dependency.")
+    endif()
+    set(PB_SRC ${protobuf_SOURCE_DIR})
+
     message(STATUS "  - Will generate: ${OUTPUT_FILE}")
 
     add_custom_command(
@@ -693,6 +706,7 @@ function(internal_process_ts_proto)
            --ts_proto_opt=esModuleInterop=true,exportCommonSymbols=false,oneof=unions,outputTypeRegistry=true,globalThisPolyfill=true
            --ts_proto_out "${TS_GEN_ROOT_DIR}"
            -I "${PROTO_ROOT_DIR}"
+           -I "${PB_SRC}/src"
            "${INPUT_PROTO_FILE}"
       WORKING_DIRECTORY "${PROTO_ROOT_DIR}"
       DEPENDS "${INPUT_PROTO_FILE}"
