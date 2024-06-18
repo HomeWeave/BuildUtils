@@ -1,5 +1,6 @@
 include(FetchContent)
 include(CMakeParseArguments)
+include(UseJava)
 
 string(CONCAT EMBED_PY_CODE
 "import os\n"
@@ -647,6 +648,80 @@ function(internal_process_py_proto)
     set(OUTPUT_FILE "${OUTPUT_FILE}" PARENT_SCOPE)
 endfunction()
 
+function(internal_process_java_proto)
+    cmake_parse_arguments(
+        PARSED_ARGS
+        ""
+        "SRC_BASE_PATH;SRC_REL_PATH;SRC_CORE_NAME;PKG;OUTPUT_BASE;PROTO_COPY_TARGET"
+        "PROTO_DEPS"
+        ${ARGN}
+    )
+    if(NOT PARSED_ARGS_OUTPUT_BASE)
+        message(FATAL_ERROR "You must provide a OUTPUT_BASE arg.")
+    endif()
+    if(NOT PARSED_ARGS_SRC_REL_PATH)
+        message(FATAL_ERROR "You must provide a SRC_REL_PATH arg.")
+    endif()
+    if(NOT PARSED_ARGS_SRC_CORE_NAME)
+        message(FATAL_ERROR "You must provide a SRC_CORE_NAME arg.")
+    endif()
+    if(NOT PARSED_ARGS_SRC_BASE_PATH)
+        message(FATAL_ERROR "You must provide a SRC_BASE_PATH arg.")
+    endif()
+    if(NOT PARSED_ARGS_PROTO_COPY_TARGET)
+        message(FATAL_ERROR "You must provide a PROTO_COPY_TARGET arg.")
+    endif()
+    if(NOT PARSED_ARGS_PKG)
+        message(FATAL_ERROR "You must provide a PKG arg.")
+    endif()
+
+    set(PROTO_ROOT_DIR "${PARSED_ARGS_SRC_BASE_PATH}")
+    set(PROTO_REL_PATH "${PARSED_ARGS_SRC_REL_PATH}")
+    string(REPLACE "." "/" PACKAGE_PATH "${PARSED_ARGS_PKG}")
+    string(CONCAT INPUT_PROTO_FILE
+           "${PARSED_ARGS_SRC_BASE_PATH}/"
+           "${PARSED_ARGS_SRC_REL_PATH}/"
+           "${PARSED_ARGS_SRC_CORE_NAME}.proto")
+    set(PROTO_CORE_NAME "${PARSED_ARGS_SRC_CORE_NAME}")
+    set(COPY_PROTO_TARGET "${PARSED_ARGS_PROTO_COPY_TARGET}")
+    set(JAVA_GEN_ROOT_DIR "${PARSED_ARGS_OUTPUT_BASE}")
+    set(OUTPUT_FILE
+        "${JAVA_GEN_ROOT_DIR}/${PACKAGE_PATH}/${PROTO_CORE_NAME}.java")
+
+    internal_proto_path_to_target("${PROTO_REL_PATH}/${PROTO_CORE_NAME}.proto")
+    set(JAVA_TARGET ${PROTO_TARGET})
+
+    file(MAKE_DIRECTORY ${JAVA_GEN_ROOT_DIR})
+
+    FetchContent_GetProperties(protobuf)  # Assume it's called protobuf.
+    if(NOT protobuf_POPULATED)
+      message(FATAL "Unable to locate protobuf dependency.")
+    endif()
+    set(PB_SRC ${protobuf_SOURCE_DIR})
+
+    message(STATUS "  - Will generate: ${OUTPUT_FILE}")
+
+    add_custom_command(
+      OUTPUT ${OUTPUT_FILE}
+      COMMAND $<TARGET_FILE:protoc>
+           --java_out "${JAVA_GEN_ROOT_DIR}"
+           -I "${PROTO_ROOT_DIR}"
+           -I "${PB_SRC}/src"
+           "${INPUT_PROTO_FILE}"
+      WORKING_DIRECTORY "${PROTO_ROOT_DIR}"
+      DEPENDS "${INPUT_PROTO_FILE}"
+    )
+
+    add_custom_target(${JAVA_TARGET}_java_genfiles_target
+                      DEPENDS ${OUTPUT_FILE})
+    add_dependencies(${JAVA_TARGET}_java_genfiles_target protoc)
+    add_dependencies(${JAVA_TARGET}_java_genfiles_target ${COPY_PROTO_TARGET})
+
+    set(GENFILES_TARGET "${JAVA_TARGET}_java_genfiles_target" PARENT_SCOPE)
+    set(JAVA_PROTO_ROOT_DIR "${JAVA_GEN_ROOT_DIR}" PARENT_SCOPE)
+    set(OUTPUT_FILE "${OUTPUT_FILE}" PARENT_SCOPE)
+endfunction()
+
 function(internal_process_ts_proto)
     cmake_parse_arguments(
         PARSED_ARGS
@@ -725,7 +800,7 @@ endfunction()
 function(process_proto_file_v2)
     cmake_parse_arguments(
         PARSED_ARGS
-        "ENABLE_CC;ENABLE_TS;ENABLE_PY"
+        "ENABLE_CC;ENABLE_TS;ENABLE_PY;ENABLE_JAVA"
         "SRC;DEST;TS_PLUGIN"
         ""  # Relative path to proto (like import statement).
         ${ARGN}
@@ -742,13 +817,20 @@ function(process_proto_file_v2)
     file(READ "${PARSED_ARGS_SRC}" proto_file_content)
     string(REPLACE ";" "SEMI-COLON" proto_file_lines "${proto_file_content}")
     string(REPLACE "\n" ";" proto_file_lines "${proto_file_lines}")
+    set(proto_package)
     foreach(line in LISTS ${proto_file_lines})
+        string(REPLACE "SEMI-COLON" ";" line "${line}")
         string(REGEX MATCH "import *\"([^\"]+)\"" match "${line}")
         if (match)
             set(import_file "${CMAKE_MATCH_1}")
             if (NOT "${import_file}" MATCHES ".*google/protobuf.*")
                 list(APPEND dependencies "${import_file}")
             endif()
+        endif()
+
+        string(REGEX MATCH "package *([^;]+);" match "${line}")
+        if (match)
+            set(proto_package "${CMAKE_MATCH_1}")
         endif()
     endforeach()
     message(STATUS "  - Dependencies: ${dependencies}")
@@ -810,6 +892,20 @@ function(process_proto_file_v2)
         set(PY_PROTO_OUTPUT_FILE ${OUTPUT_FILE} PARENT_SCOPE)
         set(PY_PROTO_TARGET ${GENFILES_TARGET} PARENT_SCOPE)
         set(PY_PROTO_ROOT_DIR ${PY_PROTO_ROOT_DIR} PARENT_SCOPE)
+    endif()
+
+    if (PARSED_ARGS_ENABLE_JAVA)
+        internal_process_java_proto(
+            SRC_BASE_PATH     "${CMAKE_BINARY_DIR}/gen-proto"
+            SRC_REL_PATH      "${rel_path}"
+            SRC_CORE_NAME     "${proto_file_name}"
+            PKG               "${proto_package}"
+            OUTPUT_BASE       "${CMAKE_BINARY_DIR}/gen-java-proto"
+            PROTO_COPY_TARGET "${current_proto_gen_files_target}"
+            PROTO_DEPS        ${dependencies})
+        set(JAVA_PROTO_OUTPUT_FILE ${OUTPUT_FILE} PARENT_SCOPE)
+        set(JAVA_PROTO_TARGET ${GENFILES_TARGET} PARENT_SCOPE)
+        set(JAVA_PROTO_ROOT_DIR ${PY_PROTO_ROOT_DIR} PARENT_SCOPE)
     endif()
 
     if (PARSED_ARGS_ENABLE_TS)
