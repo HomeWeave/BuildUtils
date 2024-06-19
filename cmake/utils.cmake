@@ -851,12 +851,24 @@ function(process_proto_file_v2)
 
     file(MAKE_DIRECTORY "${out_proto_base_dir}/${rel_path}")
 
+    list(APPEND java_outer_class_cmd)
+    if (PARSED_ARGS_ENABLE_JAVA)
+        list(APPEND java_outer_class_cmd ${CMAKE_COMMAND} -E echo)
+        list(APPEND java_outer_class_cmd
+               "option java_outer_classname = \"${proto_file_name}\"\;"
+               ">>"
+               ${target_copy_proto_file})
+        message(STATUS "Will append options: " ${java_outer_class_cmd})
+    endif()
+
     add_custom_command(
         OUTPUT ${target_copy_proto_file}
         COMMAND ${CMAKE_COMMAND} -E copy
                 ${CMAKE_CURRENT_SOURCE_DIR}/${PARSED_ARGS_SRC}
                 ${target_copy_proto_file}
-        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/${PARSED_ARGS_SRC})
+        COMMAND ${java_outer_class_cmd}
+        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/${PARSED_ARGS_SRC}
+        VERBATIM)
 
     set(current_proto_gen_files_target ${PROTO_TARGET}_copy_genfiles_target)
     add_custom_target(
