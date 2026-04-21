@@ -186,7 +186,7 @@ endfunction()
 function(internal_process_cc_proto)
     cmake_parse_arguments(
         PARSED_ARGS
-        ""
+        "CC_SRC_ONLY"
         "SRC_BASE_PATH;SRC_REL_PATH;SRC_CORE_NAME;OUTPUT_BASE;PROTO_COPY_TARGET;HAS_SERVICES"
         "PROTO_DEPS"
         ${ARGN}
@@ -271,25 +271,29 @@ function(internal_process_cc_proto)
         ${CC_LIB_TARGET}_cc_genfiles_target
         ${COPY_PROTO_TARGET})
 
-    add_library(${CC_LIB_TARGET} STATIC EXCLUDE_FROM_ALL ${output_files})
-    target_include_directories(${CC_LIB_TARGET} PUBLIC ${CC_GEN_ROOT_DIR})
-    target_link_libraries(${CC_LIB_TARGET} libprotobuf)
+    if (PARSED_ARGS_CC_SRC_ONLY)
+        set(CC_LIB_TARGET ${CC_LIB_TARGET}_cc_genfiles_target PARENT_SCOPE)
+    else()
+        add_library(${CC_LIB_TARGET} STATIC EXCLUDE_FROM_ALL ${output_files})
+        target_include_directories(${CC_LIB_TARGET} PUBLIC ${CC_GEN_ROOT_DIR})
+        target_link_libraries(${CC_LIB_TARGET} libprotobuf)
 
-    add_dependencies(${CC_LIB_TARGET} protoc)
-    add_dependencies(${CC_LIB_TARGET} libprotobuf)
-    add_dependencies(${CC_LIB_TARGET} ${CC_LIB_TARGET}_cc_genfiles_target)
+        add_dependencies(${CC_LIB_TARGET} protoc)
+        add_dependencies(${CC_LIB_TARGET} libprotobuf)
+        add_dependencies(${CC_LIB_TARGET} ${CC_LIB_TARGET}_cc_genfiles_target)
 
-    if(PROTO_SERVICES AND TARGET grpc_cpp_plugin)
-        target_link_libraries(${CC_LIB_TARGET} grpc++_unsecure)
-        add_dependencies(${CC_LIB_TARGET} grpc_cpp_plugin)
+        if(PROTO_SERVICES AND TARGET grpc_cpp_plugin)
+            target_link_libraries(${CC_LIB_TARGET} grpc++_unsecure)
+            add_dependencies(${CC_LIB_TARGET} grpc_cpp_plugin)
+        endif()
+
+        foreach(proto_deps IN ITEMS ${PARSED_ARGS_PROTO_DEPS})
+            internal_proto_path_to_target(${proto_deps})
+            target_link_libraries(${CC_LIB_TARGET} ${PROTO_TARGET})
+        endforeach()
+
+        set(CC_LIB_TARGET ${CC_LIB_TARGET} PARENT_SCOPE)
     endif()
-
-    foreach(proto_deps IN ITEMS ${PARSED_ARGS_PROTO_DEPS})
-        internal_proto_path_to_target(${proto_deps})
-        target_link_libraries(${CC_LIB_TARGET} ${PROTO_TARGET})
-    endforeach()
-
-    set(CC_LIB_TARGET ${CC_LIB_TARGET} PARENT_SCOPE)
 endfunction()
 
 function(internal_process_py_proto)
@@ -514,7 +518,7 @@ endfunction()
 function(process_proto_file_v2)
     cmake_parse_arguments(
         PARSED_ARGS
-        "ENABLE_CC;ENABLE_TS;ENABLE_PY;ENABLE_JAVA"
+        "ENABLE_CC;ENABLE_TS;ENABLE_PY;ENABLE_JAVA;CC_SRC_ONLY"
         "SRC;DEST;TS_PLUGIN"
         ""  # Relative path to proto (like import statement).
         ${ARGN}
@@ -603,7 +607,8 @@ function(process_proto_file_v2)
             OUTPUT_BASE       "${CMAKE_BINARY_DIR}/gen-cc-proto"
             PROTO_COPY_TARGET "${current_proto_gen_files_target}"
             HAS_SERVICES      "${services}"
-            PROTO_DEPS        ${dependencies})
+            PROTO_DEPS        ${dependencies}
+            "${PARSED_ARGS_CC_SRC_ONLY}")
         set(CC_LIB_TARGET ${CC_LIB_TARGET} PARENT_SCOPE)
     endif()
 
