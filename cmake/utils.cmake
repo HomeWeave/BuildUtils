@@ -358,8 +358,8 @@ function(internal_process_py_proto)
     cmake_parse_arguments(
         PARSED_ARGS
         "PROTO_GENERATE;PROTO_BUILD"
-        "SRC_BASE_PATH;SRC_REL_PATH;SRC_CORE_NAME;OUTPUT_BASE;PROTO_COPY_TARGET;PROTO_GEN_DIR"
-        "PROTO_DEPS"
+        "SRC_BASE_PATH;SRC_REL_PATH;SRC_CORE_NAME;OUTPUT_BASE;OUT_PY_GEN_TARGET;OUT_PY_FILES;OUT_PY_ROOT_DIR"
+        "PROTO_DEPS;DEP_TARGETS"
         ${ARGN}
     )
     if(NOT PARSED_ARGS_OUTPUT_BASE)
@@ -374,9 +374,6 @@ function(internal_process_py_proto)
     if(NOT PARSED_ARGS_SRC_BASE_PATH)
         message(FATAL_ERROR "You must provide a SRC_BASE_PATH arg.")
     endif()
-    if(NOT PARSED_ARGS_PROTO_COPY_TARGET)
-        message(FATAL_ERROR "You must provide a PROTO_COPY_TARGET arg.")
-    endif()
 
     set(PROTO_ROOT_DIR "${PARSED_ARGS_SRC_BASE_PATH}")
     set(PROTO_REL_PATH "${PARSED_ARGS_SRC_REL_PATH}")
@@ -385,13 +382,7 @@ function(internal_process_py_proto)
            "${PARSED_ARGS_SRC_REL_PATH}/"
            "${PARSED_ARGS_SRC_CORE_NAME}.proto")
     set(PROTO_CORE_NAME "${PARSED_ARGS_SRC_CORE_NAME}")
-    set(COPY_PROTO_TARGET "${PARSED_ARGS_PROTO_COPY_TARGET}")
-
-    if (PARSED_ARGS_PROTO_GEN_DIR)
-        set(PY_GEN_ROOT_DIR "${PARSED_ARGS_PROTO_GEN_DIR}/gen-py-proto")
-    else()
-        set(PY_GEN_ROOT_DIR "${PARSED_ARGS_OUTPUT_BASE}")
-    endif()
+    set(PY_GEN_ROOT_DIR "${PARSED_ARGS_OUTPUT_BASE}")
 
     set(OUTPUT_FILE
         "${PY_GEN_ROOT_DIR}/${PROTO_REL_PATH}/${PROTO_CORE_NAME}_pb2.py")
@@ -399,6 +390,7 @@ function(internal_process_py_proto)
     internal_proto_path_to_target(
         PATH "${PROTO_REL_PATH}/${PROTO_CORE_NAME}.proto"
         OUT_TARGET PY_TARGET)
+    set(PY_GEN_TARGET_NAME ${PY_TARGET}_py_genfiles_target)
 
     file(MAKE_DIRECTORY ${PY_GEN_ROOT_DIR})
 
@@ -421,18 +413,26 @@ function(internal_process_py_proto)
           WORKING_DIRECTORY "${PROTO_ROOT_DIR}"
           DEPENDS "${INPUT_PROTO_FILE}"
         )
-        add_custom_target(${PY_TARGET}_py_genfiles_target
+        add_custom_target(${PY_GEN_TARGET_NAME}
                           DEPENDS ${OUTPUT_FILE})
         if (TARGET protoc)
-            add_dependencies(${PY_TARGET}_py_genfiles_target protoc)
+            add_dependencies(${PY_GEN_TARGET_NAME} protoc)
         endif()
-        add_dependencies(${PY_TARGET}_py_genfiles_target ${COPY_PROTO_TARGET})
+        if (PARSED_ARGS_DEP_TARGETS)
+            add_dependencies(${PY_GEN_TARGET_NAME} ${PARSED_ARGS_DEP_TARGETS})
+        endif()
+        if (PARSED_ARGS_OUT_PY_GEN_TARGET)
+            set(${PARSED_ARGS_OUT_PY_GEN_TARGET} ${PY_GEN_TARGET_NAME} PARENT_SCOPE)
+        endif()
     endif()
 
     if (PARSED_ARGS_PROTO_BUILD)
-        set(GENFILES_TARGET "${PY_TARGET}_py_genfiles_target" PARENT_SCOPE)
-        set(PY_PROTO_ROOT_DIR "${PY_GEN_ROOT_DIR}" PARENT_SCOPE)
-        set(OUTPUT_FILE "${OUTPUT_FILE}" PARENT_SCOPE)
+        if (PARSED_ARGS_OUT_PY_FILES)
+            set(${PARSED_ARGS_OUT_PY_FILES} "${OUTPUT_FILE}" PARENT_SCOPE)
+        endif()
+        if (PARSED_ARGS_OUT_PY_ROOT_DIR)
+            set(${PARSED_ARGS_OUT_PY_ROOT_DIR} "${PY_GEN_ROOT_DIR}" PARENT_SCOPE)
+        endif()
     endif()
 endfunction()
 
@@ -741,19 +741,31 @@ function(process_proto_file_v2)
     endif()
 
     if (PARSED_ARGS_ENABLE_PY)
+        set(PY_OUT_BASE "${CMAKE_BINARY_DIR}/gen-py-proto")
+        if (PARSED_ARGS_PROTO_GEN_DIR)
+            set(PY_OUT_BASE "${PARSED_ARGS_PROTO_GEN_DIR}/gen-py-proto")
+        endif()
+
         internal_process_py_proto(
             SRC_BASE_PATH     "${CMAKE_BINARY_DIR}/gen-proto"
             SRC_REL_PATH      "${rel_path}"
             SRC_CORE_NAME     "${proto_file_name}"
-            OUTPUT_BASE       "${CMAKE_BINARY_DIR}/gen-py-proto"
-            PROTO_COPY_TARGET "${current_proto_gen_files_target}"
+            OUTPUT_BASE       "${PY_OUT_BASE}"
+            DEP_TARGETS       "${current_proto_gen_files_target}"
             PROTO_DEPS        "${dependencies}"
-            PROTO_GEN_DIR     "${PARSED_ARGS_PROTO_GEN_DIR}"
+            OUT_PY_GEN_TARGET INTERNAL_PY_GEN_TARGET
+            OUT_PY_FILES      INTERNAL_PY_FILES
+            OUT_PY_ROOT_DIR   INTERNAL_PY_ROOT_DIR
             "${PROTO_GEN_FLAG}"
             "${PROTO_BUILD_FLAG}")
-        set(PY_PROTO_OUTPUT_FILE ${OUTPUT_FILE} PARENT_SCOPE)
-        set(PY_PROTO_TARGET ${GENFILES_TARGET} PARENT_SCOPE)
-        set(PY_PROTO_ROOT_DIR ${PY_PROTO_ROOT_DIR} PARENT_SCOPE)
+
+        if (PARSED_ARGS_PROTO_GENERATE)
+            set(PY_PROTO_TARGET ${INTERNAL_PY_GEN_TARGET} PARENT_SCOPE)
+        endif()
+        if (PARSED_ARGS_PROTO_BUILD)
+            set(PY_PROTO_OUTPUT_FILE ${INTERNAL_PY_FILES} PARENT_SCOPE)
+            set(PY_PROTO_ROOT_DIR ${INTERNAL_PY_ROOT_DIR} PARENT_SCOPE)
+        endif()
     endif()
 
     if (PARSED_ARGS_ENABLE_JAVA)
