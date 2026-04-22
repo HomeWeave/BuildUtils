@@ -440,8 +440,8 @@ function(internal_process_java_proto)
     cmake_parse_arguments(
         PARSED_ARGS
         "PROTO_GENERATE;PROTO_BUILD"
-        "SRC_BASE_PATH;SRC_REL_PATH;SRC_CORE_NAME;PKG;OUTPUT_BASE;PROTO_COPY_TARGET;PROTO_GEN_DIR"
-        "PROTO_DEPS"
+        "SRC_BASE_PATH;SRC_REL_PATH;SRC_CORE_NAME;PKG;OUTPUT_BASE;OUT_JAVA_GEN_TARGET;OUT_JAVA_FILES;OUT_JAVA_ROOT_DIR"
+        "PROTO_DEPS;DEP_TARGETS"
         ${ARGN}
     )
     if(NOT PARSED_ARGS_OUTPUT_BASE)
@@ -456,9 +456,6 @@ function(internal_process_java_proto)
     if(NOT PARSED_ARGS_SRC_BASE_PATH)
         message(FATAL_ERROR "You must provide a SRC_BASE_PATH arg.")
     endif()
-    if(NOT PARSED_ARGS_PROTO_COPY_TARGET)
-        message(FATAL_ERROR "You must provide a PROTO_COPY_TARGET arg.")
-    endif()
     if(NOT PARSED_ARGS_PKG)
         message(FATAL_ERROR "You must provide a PKG arg.")
     endif()
@@ -471,13 +468,7 @@ function(internal_process_java_proto)
            "${PARSED_ARGS_SRC_REL_PATH}/"
            "${PARSED_ARGS_SRC_CORE_NAME}.proto")
     set(PROTO_CORE_NAME "${PARSED_ARGS_SRC_CORE_NAME}")
-    set(COPY_PROTO_TARGET "${PARSED_ARGS_PROTO_COPY_TARGET}")
-
-    if (PARSED_ARGS_PROTO_GEN_DIR)
-        set(JAVA_GEN_ROOT_DIR "${PARSED_ARGS_PROTO_GEN_DIR}/gen-java-proto")
-    else()
-        set(JAVA_GEN_ROOT_DIR "${PARSED_ARGS_OUTPUT_BASE}")
-    endif()
+    set(JAVA_GEN_ROOT_DIR "${PARSED_ARGS_OUTPUT_BASE}")
 
     set(OUTPUT_FILE
         "${JAVA_GEN_ROOT_DIR}/${PACKAGE_PATH}/${PROTO_CORE_NAME}.java")
@@ -485,6 +476,7 @@ function(internal_process_java_proto)
     internal_proto_path_to_target(
         PATH "${PROTO_REL_PATH}/${PROTO_CORE_NAME}.proto"
         OUT_TARGET JAVA_TARGET)
+    set(JAVA_GEN_TARGET_NAME ${JAVA_TARGET}_java_genfiles_target)
 
     file(MAKE_DIRECTORY ${JAVA_GEN_ROOT_DIR})
 
@@ -508,18 +500,26 @@ function(internal_process_java_proto)
           DEPENDS "${INPUT_PROTO_FILE}"
         )
 
-        add_custom_target(${JAVA_TARGET}_java_genfiles_target
+        add_custom_target(${JAVA_GEN_TARGET_NAME}
                           DEPENDS ${OUTPUT_FILE})
         if (TARGET protoc)
-            add_dependencies(${JAVA_TARGET}_java_genfiles_target protoc)
+            add_dependencies(${JAVA_GEN_TARGET_NAME} protoc)
         endif()
-        add_dependencies(${JAVA_TARGET}_java_genfiles_target ${COPY_PROTO_TARGET})
+        if (PARSED_ARGS_DEP_TARGETS)
+            add_dependencies(${JAVA_GEN_TARGET_NAME} ${PARSED_ARGS_DEP_TARGETS})
+        endif()
+        if (PARSED_ARGS_OUT_JAVA_GEN_TARGET)
+            set(${PARSED_ARGS_OUT_JAVA_GEN_TARGET} ${JAVA_GEN_TARGET_NAME} PARENT_SCOPE)
+        endif()
     endif()
 
     if (PARSED_ARGS_PROTO_BUILD)
-        set(GENFILES_TARGET "${JAVA_TARGET}_java_genfiles_target" PARENT_SCOPE)
-        set(JAVA_PROTO_ROOT_DIR "${JAVA_GEN_ROOT_DIR}" PARENT_SCOPE)
-        set(OUTPUT_FILE "${OUTPUT_FILE}" PARENT_SCOPE)
+        if (PARSED_ARGS_OUT_JAVA_FILES)
+            set(${PARSED_ARGS_OUT_JAVA_FILES} "${OUTPUT_FILE}" PARENT_SCOPE)
+        endif()
+        if (PARSED_ARGS_OUT_JAVA_ROOT_DIR)
+            set(${PARSED_ARGS_OUT_JAVA_ROOT_DIR} "${JAVA_GEN_ROOT_DIR}" PARENT_SCOPE)
+        endif()
     endif()
 endfunction()
 
@@ -527,8 +527,8 @@ function(internal_process_ts_proto)
     cmake_parse_arguments(
         PARSED_ARGS
         "PROTO_GENERATE;PROTO_BUILD"
-        "SRC_BASE_PATH;SRC_REL_PATH;SRC_CORE_NAME;OUTPUT_BASE;PROTO_COPY_TARGET;TS_PLUGIN;PROTO_GEN_DIR"
-        "PROTO_DEPS"
+        "SRC_BASE_PATH;SRC_REL_PATH;SRC_CORE_NAME;OUTPUT_BASE;TS_PLUGIN;OUT_TS_GEN_TARGET;OUT_TS_FILES;OUT_TS_ROOT_DIR"
+        "PROTO_DEPS;DEP_TARGETS"
         ${ARGN}
     )
     if(NOT PARSED_ARGS_OUTPUT_BASE)
@@ -543,9 +543,6 @@ function(internal_process_ts_proto)
     if(NOT PARSED_ARGS_SRC_BASE_PATH)
         message(FATAL_ERROR "You must provide a SRC_BASE_PATH arg.")
     endif()
-    if(NOT PARSED_ARGS_PROTO_COPY_TARGET)
-        message(FATAL_ERROR "You must provide a PROTO_COPY_TARGET arg.")
-    endif()
     if(NOT PARSED_ARGS_TS_PLUGIN)
         message(FATAL_ERROR "You must provide a TS_PLUGIN arg.")
     endif()
@@ -557,13 +554,7 @@ function(internal_process_ts_proto)
            "${PARSED_ARGS_SRC_REL_PATH}/"
            "${PARSED_ARGS_SRC_CORE_NAME}.proto")
     set(PROTO_CORE_NAME "${PARSED_ARGS_SRC_CORE_NAME}")
-    set(COPY_PROTO_TARGET "${PARSED_ARGS_PROTO_COPY_TARGET}")
-
-    if (PARSED_ARGS_PROTO_GEN_DIR)
-        set(TS_GEN_ROOT_DIR "${PARSED_ARGS_PROTO_GEN_DIR}/gen-ts-proto")
-    else()
-        set(TS_GEN_ROOT_DIR "${PARSED_ARGS_OUTPUT_BASE}")
-    endif()
+    set(TS_GEN_ROOT_DIR "${PARSED_ARGS_OUTPUT_BASE}")
 
     set(OUTPUT_FILE
         "${TS_GEN_ROOT_DIR}/${PROTO_REL_PATH}/${PROTO_CORE_NAME}.ts")
@@ -571,6 +562,7 @@ function(internal_process_ts_proto)
     internal_proto_path_to_target(
         PATH "${PROTO_REL_PATH}/${PROTO_CORE_NAME}.proto"
         OUT_TARGET TS_TARGET)
+    set(TS_GEN_TARGET_NAME ${TS_TARGET}_ts_genfiles_target)
 
     file(MAKE_DIRECTORY ${TS_GEN_ROOT_DIR})
 
@@ -596,18 +588,26 @@ function(internal_process_ts_proto)
           DEPENDS "${INPUT_PROTO_FILE}"
         )
 
-        add_custom_target(${TS_TARGET}_ts_genfiles_target
+        add_custom_target(${TS_GEN_TARGET_NAME}
                           DEPENDS ${OUTPUT_FILE})
         if (TARGET protoc)
-            add_dependencies(${TS_TARGET}_ts_genfiles_target protoc)
+            add_dependencies(${TS_GEN_TARGET_NAME} protoc)
         endif()
-        add_dependencies(${TS_TARGET}_ts_genfiles_target ${COPY_PROTO_TARGET})
+        if (PARSED_ARGS_DEP_TARGETS)
+            add_dependencies(${TS_GEN_TARGET_NAME} ${PARSED_ARGS_DEP_TARGETS})
+        endif()
+        if (PARSED_ARGS_OUT_TS_GEN_TARGET)
+            set(${PARSED_ARGS_OUT_TS_GEN_TARGET} ${TS_GEN_TARGET_NAME} PARENT_SCOPE)
+        endif()
     endif()
 
     if (PARSED_ARGS_PROTO_BUILD)
-        set(GENFILES_TARGET "${TS_TARGET}_ts_genfiles_target" PARENT_SCOPE)
-        set(TS_PROTO_ROOT_DIR "${TS_GEN_ROOT_DIR}" PARENT_SCOPE)
-        set(OUTPUT_FILE "${OUTPUT_FILE}" PARENT_SCOPE)
+        if (PARSED_ARGS_OUT_TS_FILES)
+            set(${PARSED_ARGS_OUT_TS_FILES} "${OUTPUT_FILE}" PARENT_SCOPE)
+        endif()
+        if (PARSED_ARGS_OUT_TS_ROOT_DIR)
+            set(${PARSED_ARGS_OUT_TS_ROOT_DIR} "${TS_GEN_ROOT_DIR}" PARENT_SCOPE)
+        endif()
     endif()
 endfunction()
 
@@ -769,20 +769,32 @@ function(process_proto_file_v2)
     endif()
 
     if (PARSED_ARGS_ENABLE_JAVA)
+        set(JAVA_OUT_BASE "${CMAKE_BINARY_DIR}/gen-java-proto")
+        if (PARSED_ARGS_PROTO_GEN_DIR)
+            set(JAVA_OUT_BASE "${PARSED_ARGS_PROTO_GEN_DIR}/gen-java-proto")
+        endif()
+
         internal_process_java_proto(
             SRC_BASE_PATH     "${CMAKE_BINARY_DIR}/gen-proto"
             SRC_REL_PATH      "${rel_path}"
             SRC_CORE_NAME     "${proto_file_name}"
             PKG               "${proto_package}"
-            OUTPUT_BASE       "${CMAKE_BINARY_DIR}/gen-java-proto"
-            PROTO_COPY_TARGET "${current_proto_gen_files_target}"
+            OUTPUT_BASE       "${JAVA_OUT_BASE}"
+            DEP_TARGETS       "${current_proto_gen_files_target}"
             PROTO_DEPS        "${dependencies}"
-            PROTO_GEN_DIR     "${PARSED_ARGS_PROTO_GEN_DIR}"
+            OUT_JAVA_GEN_TARGET INTERNAL_JAVA_GEN_TARGET
+            OUT_JAVA_FILES      INTERNAL_JAVA_FILES
+            OUT_JAVA_ROOT_DIR   INTERNAL_JAVA_ROOT_DIR
             "${PROTO_GEN_FLAG}"
             "${PROTO_BUILD_FLAG}")
-        set(JAVA_PROTO_OUTPUT_FILE ${OUTPUT_FILE} PARENT_SCOPE)
-        set(JAVA_PROTO_TARGET ${GENFILES_TARGET} PARENT_SCOPE)
-        set(JAVA_PROTO_ROOT_DIR ${PY_PROTO_ROOT_DIR} PARENT_SCOPE)
+
+        if (PARSED_ARGS_PROTO_GENERATE)
+            set(JAVA_PROTO_TARGET ${INTERNAL_JAVA_GEN_TARGET} PARENT_SCOPE)
+        endif()
+        if (PARSED_ARGS_PROTO_BUILD)
+            set(JAVA_PROTO_OUTPUT_FILE ${INTERNAL_JAVA_FILES} PARENT_SCOPE)
+            set(JAVA_PROTO_ROOT_DIR ${INTERNAL_JAVA_ROOT_DIR} PARENT_SCOPE)
+        endif()
     endif()
 
     if (PARSED_ARGS_ENABLE_TS)
@@ -790,20 +802,32 @@ function(process_proto_file_v2)
             message(FATAL_ERROR "You must provide a TS_PLUGIN arg.")
         endif()
 
+        set(TS_OUT_BASE "${CMAKE_BINARY_DIR}/gen-ts-proto")
+        if (PARSED_ARGS_PROTO_GEN_DIR)
+            set(TS_OUT_BASE "${PARSED_ARGS_PROTO_GEN_DIR}/gen-ts-proto")
+        endif()
+
         internal_process_ts_proto(
             SRC_BASE_PATH     "${CMAKE_BINARY_DIR}/gen-proto"
             SRC_REL_PATH      "${rel_path}"
             SRC_CORE_NAME     "${proto_file_name}"
-            OUTPUT_BASE       "${CMAKE_BINARY_DIR}/gen-ts-proto"
-            PROTO_COPY_TARGET "${current_proto_gen_files_target}"
+            OUTPUT_BASE       "${TS_OUT_BASE}"
+            DEP_TARGETS       "${current_proto_gen_files_target}"
             TS_PLUGIN         "${PARSED_ARGS_TS_PLUGIN}"
             PROTO_DEPS        "${dependencies}"
-            PROTO_GEN_DIR     "${PARSED_ARGS_PROTO_GEN_DIR}"
+            OUT_TS_GEN_TARGET INTERNAL_TS_GEN_TARGET
+            OUT_TS_FILES      INTERNAL_TS_FILES
+            OUT_TS_ROOT_DIR   INTERNAL_TS_ROOT_DIR
             "${PROTO_GEN_FLAG}"
             "${PROTO_BUILD_FLAG}")
-        set(TS_PROTO_OUTPUT_FILE ${OUTPUT_FILE} PARENT_SCOPE)
-        set(TS_PROTO_TARGET ${GENFILES_TARGET} PARENT_SCOPE)
-        set(TS_PROTO_ROOT_DIR ${TS_PROTO_ROOT_DIR} PARENT_SCOPE)
+
+        if (PARSED_ARGS_PROTO_GENERATE)
+            set(TS_PROTO_TARGET ${INTERNAL_TS_GEN_TARGET} PARENT_SCOPE)
+        endif()
+        if (PARSED_ARGS_PROTO_BUILD)
+            set(TS_PROTO_OUTPUT_FILE ${INTERNAL_TS_FILES} PARENT_SCOPE)
+            set(TS_PROTO_ROOT_DIR ${INTERNAL_TS_ROOT_DIR} PARENT_SCOPE)
+        endif()
     endif()
 endfunction()
 
