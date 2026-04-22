@@ -831,6 +831,167 @@ function(process_proto_file_v2)
     endif()
 endfunction()
 
+function(process_proto_set)
+    cmake_parse_arguments(
+        PARSED_ARGS
+        "ENABLE_CC;ENABLE_PY;ENABLE_JAVA;ENABLE_TS;PROTO_GENERATE;PROTO_BUILD"
+        "TARGET;SOURCE_DIR;DEST_DIR;TS_PLUGIN;PROTOBUF_JAR;PROTO_GEN_DIR;OUT_CC_TARGET;OUT_PY_TARGET;OUT_JAVA_TARGET;OUT_TS_TARGET;OUT_GEN_TARGET"
+        "FILES;ADDITIONAL_JAR_INCLUDES"
+        ${ARGN}
+    )
+
+    if (NOT PARSED_ARGS_TARGET)
+        message(FATAL_ERROR "TARGET arg missing.")
+    endif()
+    if (NOT PARSED_ARGS_SOURCE_DIR)
+        message(FATAL_ERROR "SOURCE_DIR arg missing.")
+    endif()
+    if (NOT PARSED_ARGS_DEST_DIR)
+        set(PARSED_ARGS_DEST_DIR ${PARSED_ARGS_SOURCE_DIR})
+    endif()
+
+    if (NOT PARSED_ARGS_PROTO_GENERATE AND NOT PARSED_ARGS_PROTO_BUILD)
+        set(PARSED_ARGS_PROTO_GENERATE ON)
+        set(PARSED_ARGS_PROTO_BUILD ON)
+    endif()
+
+    set(LANG_ARGS)
+    if (PARSED_ARGS_ENABLE_CC)
+        list(APPEND LANG_ARGS ENABLE_CC)
+    endif()
+    if (PARSED_ARGS_ENABLE_PY)
+        list(APPEND LANG_ARGS ENABLE_PY)
+    endif()
+    if (PARSED_ARGS_ENABLE_JAVA)
+        list(APPEND LANG_ARGS ENABLE_JAVA)
+    endif()
+    if (PARSED_ARGS_ENABLE_TS)
+        list(APPEND LANG_ARGS ENABLE_TS TS_PLUGIN ${PARSED_ARGS_TS_PLUGIN})
+    endif()
+
+    set(PHASE_ARGS)
+    if (PARSED_ARGS_PROTO_GENERATE)
+        list(APPEND PHASE_ARGS PROTO_GENERATE)
+    endif()
+    if (PARSED_ARGS_PROTO_BUILD)
+        list(APPEND PHASE_ARGS PROTO_BUILD)
+    endif()
+    if (PARSED_ARGS_PROTO_GEN_DIR)
+        list(APPEND PHASE_ARGS PROTO_GEN_DIR ${PARSED_ARGS_PROTO_GEN_DIR})
+    endif()
+
+    set(CC_LIBS)
+    set(CC_GEN_TARGETS)
+    set(PY_FILES)
+    set(PY_GEN_TARGETS)
+    set(JAVA_FILES)
+    set(JAVA_GEN_TARGETS)
+    set(TS_GEN_TARGETS)
+    set(PY_ROOT_DIR)
+
+    foreach(CUR_FILE IN LISTS PARSED_ARGS_FILES)
+        process_proto_file_v2(
+            SRC ${PARSED_ARGS_SOURCE_DIR}/${CUR_FILE}
+            DEST ${PARSED_ARGS_DEST_DIR}/${CUR_FILE}
+            ${LANG_ARGS}
+            ${PHASE_ARGS}
+        )
+
+        if (PARSED_ARGS_ENABLE_CC)
+            if (PARSED_ARGS_PROTO_BUILD)
+                list(APPEND CC_LIBS ${CC_LIB_TARGET})
+            endif()
+            if (PARSED_ARGS_PROTO_GENERATE)
+                list(APPEND CC_GEN_TARGETS ${CC_GEN_TARGET})
+            endif()
+        endif()
+
+        if (PARSED_ARGS_ENABLE_PY)
+            if (PARSED_ARGS_PROTO_BUILD)
+                list(APPEND PY_FILES ${PY_PROTO_OUTPUT_FILE})
+                set(PY_ROOT_DIR ${PY_PROTO_ROOT_DIR})
+            endif()
+            if (PARSED_ARGS_PROTO_GENERATE)
+                list(APPEND PY_GEN_TARGETS ${PY_PROTO_TARGET})
+            endif()
+        endif()
+
+        if (PARSED_ARGS_ENABLE_JAVA)
+            if (PARSED_ARGS_PROTO_BUILD)
+                list(APPEND JAVA_FILES ${JAVA_PROTO_OUTPUT_FILE})
+                set(JAVA_ROOT_DIR ${JAVA_PROTO_ROOT_DIR})
+            endif()
+            if (PARSED_ARGS_PROTO_GENERATE)
+                list(APPEND JAVA_GEN_TARGETS ${JAVA_PROTO_TARGET})
+            endif()
+        endif()
+
+        if (PARSED_ARGS_ENABLE_TS)
+            if (PARSED_ARGS_PROTO_GENERATE)
+                list(APPEND TS_GEN_TARGETS ${TS_PROTO_TARGET})
+            endif()
+        endif()
+    endforeach()
+
+    if (PARSED_ARGS_PROTO_BUILD)
+        if (PARSED_ARGS_ENABLE_CC)
+            set(SET_CC_TARGET ${PARSED_ARGS_TARGET}_ccproto)
+            set(DUMMY_FILE "${CMAKE_CURRENT_BINARY_DIR}/dummy_${SET_CC_TARGET}.cc")
+            file(WRITE "${DUMMY_FILE}")
+            add_library(${SET_CC_TARGET} ${DUMMY_FILE})
+            target_link_libraries(${SET_CC_TARGET} libprotobuf ${CC_LIBS})
+            target_compile_features(${SET_CC_TARGET} PUBLIC cxx_std_17)
+            if (PARSED_ARGS_OUT_CC_TARGET)
+                set(${PARSED_ARGS_OUT_CC_TARGET} ${SET_CC_TARGET} PARENT_SCOPE)
+            endif()
+        endif()
+
+        if (PARSED_ARGS_ENABLE_PY)
+            set(SET_PY_TARGET ${PARSED_ARGS_TARGET}_pyproto)
+            embed_resource(
+                TARGET ${SET_PY_TARGET}
+                SOURCES ${PY_FILES}
+                BASE_DIR ${PY_ROOT_DIR}
+                DEPENDS ${PY_GEN_TARGETS})
+            set_property(TARGET ${SET_PY_TARGET} PROPERTY POSITION_INDEPENDENT_CODE ON)
+            if (PARSED_ARGS_OUT_PY_TARGET)
+                set(${PARSED_ARGS_OUT_PY_TARGET} ${SET_PY_TARGET} PARENT_SCOPE)
+            endif()
+        endif()
+
+        if (PARSED_ARGS_ENABLE_JAVA)
+            set(SET_JAVA_TARGET ${PARSED_ARGS_TARGET}_jar)
+            add_jar(${SET_JAVA_TARGET}
+                SOURCES ${JAVA_FILES}
+                INCLUDE_JARS ${PARSED_ARGS_PROTOBUF_JAR} ${PARSED_ARGS_ADDITIONAL_JAR_INCLUDES})
+            add_dependencies(${SET_JAVA_TARGET} ${JAVA_GEN_TARGETS})
+            if (PARSED_ARGS_OUT_JAVA_TARGET)
+                set(${PARSED_ARGS_OUT_JAVA_TARGET} ${SET_JAVA_TARGET} PARENT_SCOPE)
+            endif()
+        endif()
+
+        if (PARSED_ARGS_ENABLE_TS)
+            set(SET_TS_TARGET ${PARSED_ARGS_TARGET}_tsproto)
+            add_custom_target(${SET_TS_TARGET})
+            if (TS_GEN_TARGETS)
+                add_dependencies(${SET_TS_TARGET} ${TS_GEN_TARGETS})
+            endif()
+            if (PARSED_ARGS_OUT_TS_TARGET)
+                set(${PARSED_ARGS_OUT_TS_TARGET} ${SET_TS_TARGET} PARENT_SCOPE)
+            endif()
+        endif()
+    endif()
+
+    if (PARSED_ARGS_PROTO_GENERATE)
+        set(MASTER_GEN_TARGET ${PARSED_ARGS_TARGET}_gen)
+        add_custom_target(${MASTER_GEN_TARGET})
+        add_dependencies(${MASTER_GEN_TARGET} ${CC_GEN_TARGETS} ${PY_GEN_TARGETS} ${JAVA_GEN_TARGETS} ${TS_GEN_TARGETS})
+        if (PARSED_ARGS_OUT_GEN_TARGET)
+            set(${PARSED_ARGS_OUT_GEN_TARGET} ${MASTER_GEN_TARGET} PARENT_SCOPE)
+        endif()
+    endif()
+endfunction()
+
 function(embed_resource)
     cmake_parse_arguments(
         PARSED_ARGS
