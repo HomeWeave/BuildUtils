@@ -178,9 +178,23 @@ function(ensure_out_of_source_builds)
     endif()
 endfunction()
 
-function(internal_proto_path_to_target path)
-    string(REGEX REPLACE "[^a-zA-Z0-9]" "_" TARGET ${path})
-    set(PROTO_TARGET "${TARGET}" PARENT_SCOPE)
+function(internal_proto_path_to_target)
+    cmake_parse_arguments(
+        PARSED_ARGS
+        ""
+        "PATH;OUT_TARGET"
+        ""
+        ${ARGN}
+    )
+    if (NOT PARSED_ARGS_PATH)
+        message(FATAL_ERROR "PATH arg missing.")
+    endif()
+    if (NOT PARSED_ARGS_OUT_TARGET)
+        message(FATAL_ERROR "OUT_TARGET arg missing.")
+    endif()
+
+    string(REGEX REPLACE "[^a-zA-Z0-9]" "_" TARGET ${PARSED_ARGS_PATH})
+    set(${PARSED_ARGS_OUT_TARGET} "${TARGET}" PARENT_SCOPE)
 endfunction()
 
 function(build_cc_proto_library)
@@ -249,8 +263,9 @@ function(internal_process_cc_proto)
         set(CC_GEN_ROOT_DIR "${PARSED_ARGS_OUTPUT_BASE}")
     endif()
 
-    internal_proto_path_to_target("${PROTO_REL_PATH}/${PROTO_CORE_NAME}.proto")
-    set(CC_LIB_TARGET ${PROTO_TARGET})
+    internal_proto_path_to_target(
+        PATH "${PROTO_REL_PATH}/${PROTO_CORE_NAME}.proto"
+        OUT_TARGET CC_LIB_TARGET)
 
     file(MAKE_DIRECTORY ${CC_GEN_ROOT_DIR})
 
@@ -319,7 +334,9 @@ function(internal_process_cc_proto)
         endif()
 
         foreach(proto_deps IN ITEMS ${PARSED_ARGS_PROTO_DEPS})
-            internal_proto_path_to_target(${proto_deps})
+            internal_proto_path_to_target(
+                PATH ${proto_deps}
+                OUT_TARGET PROTO_TARGET)
             list(APPEND CC_LINK_LIBS ${PROTO_TARGET})
         endforeach()
 
@@ -378,8 +395,9 @@ function(internal_process_py_proto)
     set(OUTPUT_FILE
         "${PY_GEN_ROOT_DIR}/${PROTO_REL_PATH}/${PROTO_CORE_NAME}_pb2.py")
 
-    internal_proto_path_to_target("${PROTO_REL_PATH}/${PROTO_CORE_NAME}.proto")
-    set(PY_TARGET ${PROTO_TARGET})
+    internal_proto_path_to_target(
+        PATH "${PROTO_REL_PATH}/${PROTO_CORE_NAME}.proto"
+        OUT_TARGET PY_TARGET)
 
     file(MAKE_DIRECTORY ${PY_GEN_ROOT_DIR})
 
@@ -463,8 +481,9 @@ function(internal_process_java_proto)
     set(OUTPUT_FILE
         "${JAVA_GEN_ROOT_DIR}/${PACKAGE_PATH}/${PROTO_CORE_NAME}.java")
 
-    internal_proto_path_to_target("${PROTO_REL_PATH}/${PROTO_CORE_NAME}.proto")
-    set(JAVA_TARGET ${PROTO_TARGET})
+    internal_proto_path_to_target(
+        PATH "${PROTO_REL_PATH}/${PROTO_CORE_NAME}.proto"
+        OUT_TARGET JAVA_TARGET)
 
     file(MAKE_DIRECTORY ${JAVA_GEN_ROOT_DIR})
 
@@ -548,8 +567,9 @@ function(internal_process_ts_proto)
     set(OUTPUT_FILE
         "${TS_GEN_ROOT_DIR}/${PROTO_REL_PATH}/${PROTO_CORE_NAME}.ts")
 
-    internal_proto_path_to_target("${PROTO_REL_PATH}/${PROTO_CORE_NAME}.proto")
-    set(TS_TARGET ${PROTO_TARGET})
+    internal_proto_path_to_target(
+        PATH "${PROTO_REL_PATH}/${PROTO_CORE_NAME}.proto"
+        OUT_TARGET TS_TARGET)
 
     file(MAKE_DIRECTORY ${TS_GEN_ROOT_DIR})
 
@@ -654,8 +674,9 @@ function(process_proto_file_v2)
     set(out_proto_base_dir "${CMAKE_BINARY_DIR}/gen-proto")
     set(target_copy_proto_file
         "${out_proto_base_dir}/${rel_path}/${proto_file_name}.proto")
-    internal_proto_path_to_target("${PARSED_ARGS_DEST}") # Result: PROTO_TARGET
-
+    internal_proto_path_to_target(
+        PATH "${PARSED_ARGS_DEST}"
+        OUT_TARGET PROTO_TARGET)
 
     file(MAKE_DIRECTORY "${out_proto_base_dir}/${rel_path}")
 
@@ -684,7 +705,9 @@ function(process_proto_file_v2)
         DEPENDS ${target_copy_proto_file})
 
     foreach(proto_deps IN ITEMS ${dependencies})
-        internal_proto_path_to_target("${proto_deps}")
+        internal_proto_path_to_target(
+            PATH "${proto_deps}"
+            OUT_TARGET PROTO_TARGET)
         add_dependencies(${current_proto_gen_files_target}
                          ${PROTO_TARGET}_copy_genfiles_target)
     endforeach()
