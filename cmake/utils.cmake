@@ -227,8 +227,8 @@ function(internal_process_cc_proto)
     cmake_parse_arguments(
         PARSED_ARGS
         "PROTO_GENERATE;PROTO_BUILD"
-        "SRC_BASE_PATH;SRC_REL_PATH;SRC_CORE_NAME;OUTPUT_BASE;PROTO_COPY_TARGET;HAS_SERVICES;PROTO_GEN_DIR"
-        "PROTO_DEPS"
+        "SRC_BASE_PATH;SRC_REL_PATH;SRC_CORE_NAME;OUTPUT_BASE;HAS_SERVICES;OUT_CC_LIB_TARGET;OUT_CC_GEN_TARGET"
+        "PROTO_DEPS;DEP_TARGETS"
         ${ARGN}
     )
     if(NOT PARSED_ARGS_OUTPUT_BASE)
@@ -243,9 +243,6 @@ function(internal_process_cc_proto)
     if(NOT PARSED_ARGS_SRC_BASE_PATH)
         message(FATAL_ERROR "You must provide a SRC_BASE_PATH arg.")
     endif()
-    if(NOT PARSED_ARGS_PROTO_COPY_TARGET)
-        message(FATAL_ERROR "You must provide a PROTO_COPY_TARGET arg.")
-    endif()
 
     set(PROTO_ROOT_DIR "${PARSED_ARGS_SRC_BASE_PATH}")
     set(PROTO_REL_PATH "${PARSED_ARGS_SRC_REL_PATH}")
@@ -255,17 +252,12 @@ function(internal_process_cc_proto)
            "${PARSED_ARGS_SRC_CORE_NAME}.proto")
     set(PROTO_CORE_NAME "${PARSED_ARGS_SRC_CORE_NAME}")
     set(PROTO_SERVICES "${PARSED_ARGS_HAS_SERVICES}")
-    set(COPY_PROTO_TARGET "${PARSED_ARGS_PROTO_COPY_TARGET}")
-
-    if (PARSED_ARGS_PROTO_GEN_DIR)
-        set(CC_GEN_ROOT_DIR "${PARSED_ARGS_PROTO_GEN_DIR}/gen-cc-proto")
-    else()
-        set(CC_GEN_ROOT_DIR "${PARSED_ARGS_OUTPUT_BASE}")
-    endif()
+    set(CC_GEN_ROOT_DIR "${PARSED_ARGS_OUTPUT_BASE}")
 
     internal_proto_path_to_target(
         PATH "${PROTO_REL_PATH}/${PROTO_CORE_NAME}.proto"
         OUT_TARGET CC_LIB_TARGET)
+    set(CC_GEN_TARGET_NAME ${CC_LIB_TARGET}_cc_genfiles_target)
 
     file(MAKE_DIRECTORY ${CC_GEN_ROOT_DIR})
 
@@ -310,13 +302,21 @@ function(internal_process_cc_proto)
           DEPENDS "${INPUT_PROTO_FILE}"
         )
         add_custom_target(
-            ${CC_LIB_TARGET}_cc_genfiles_target
+            ${CC_GEN_TARGET_NAME}
             DEPENDS ${output_files})
-        add_dependencies(
-            ${CC_LIB_TARGET}_cc_genfiles_target
-            ${COPY_PROTO_TARGET})
+
+        if (PARSED_ARGS_DEP_TARGETS)
+            add_dependencies(
+                ${CC_GEN_TARGET_NAME}
+                ${PARSED_ARGS_DEP_TARGETS})
+        endif()
+
         if (TARGET protoc)
-            add_dependencies(${CC_LIB_TARGET}_cc_genfiles_target protoc)
+            add_dependencies(${CC_GEN_TARGET_NAME} protoc)
+        endif()
+
+        if (PARSED_ARGS_OUT_CC_GEN_TARGET)
+            set(${PARSED_ARGS_OUT_CC_GEN_TARGET} ${CC_GEN_TARGET_NAME} PARENT_SCOPE)
         endif()
     endif()
 
@@ -330,7 +330,7 @@ function(internal_process_cc_proto)
         endif()
 
         if (PARSED_ARGS_PROTO_GENERATE)
-            list(APPEND CC_DEPS ${CC_LIB_TARGET}_cc_genfiles_target)
+            list(APPEND CC_DEPS ${CC_GEN_TARGET_NAME})
         endif()
 
         foreach(proto_deps IN ITEMS ${PARSED_ARGS_PROTO_DEPS})
@@ -347,9 +347,10 @@ function(internal_process_cc_proto)
             LINK_LIBRARIES ${CC_LINK_LIBS}
             DEPENDENCIES ${CC_DEPS}
         )
-        set(CC_LIB_TARGET ${CC_LIB_TARGET} PARENT_SCOPE)
-    else()
-        set(CC_LIB_TARGET ${CC_LIB_TARGET}_cc_genfiles_target PARENT_SCOPE)
+
+        if (PARSED_ARGS_OUT_CC_LIB_TARGET)
+            set(${PARSED_ARGS_OUT_CC_LIB_TARGET} ${CC_LIB_TARGET} PARENT_SCOPE)
+        endif()
     endif()
 endfunction()
 
@@ -713,18 +714,30 @@ function(process_proto_file_v2)
     endforeach()
 
     if (PARSED_ARGS_ENABLE_CC)
+        set(CC_OUT_BASE "${CMAKE_BINARY_DIR}/gen-cc-proto")
+        if (PARSED_ARGS_PROTO_GEN_DIR)
+            set(CC_OUT_BASE "${PARSED_ARGS_PROTO_GEN_DIR}/gen-cc-proto")
+        endif()
+
         internal_process_cc_proto(
             SRC_BASE_PATH     "${CMAKE_BINARY_DIR}/gen-proto"
             SRC_REL_PATH      "${rel_path}"
             SRC_CORE_NAME     "${proto_file_name}"
-            OUTPUT_BASE       "${CMAKE_BINARY_DIR}/gen-cc-proto"
-            PROTO_COPY_TARGET "${current_proto_gen_files_target}"
+            OUTPUT_BASE       "${CC_OUT_BASE}"
+            DEP_TARGETS       "${current_proto_gen_files_target}"
             HAS_SERVICES      "${services}"
             PROTO_DEPS        "${dependencies}"
-            PROTO_GEN_DIR     "${PARSED_ARGS_PROTO_GEN_DIR}"
+            OUT_CC_LIB_TARGET INTERNAL_CC_LIB_TARGET
+            OUT_CC_GEN_TARGET INTERNAL_CC_GEN_TARGET
             "${PROTO_GEN_FLAG}"
             "${PROTO_BUILD_FLAG}")
-        set(CC_LIB_TARGET ${CC_LIB_TARGET} PARENT_SCOPE)
+
+        if (PARSED_ARGS_PROTO_BUILD)
+             set(CC_LIB_TARGET ${INTERNAL_CC_LIB_TARGET} PARENT_SCOPE)
+        endif()
+        if (PARSED_ARGS_PROTO_GENERATE)
+             set(CC_GEN_TARGET ${INTERNAL_CC_GEN_TARGET} PARENT_SCOPE)
+        endif()
     endif()
 
     if (PARSED_ARGS_ENABLE_PY)
