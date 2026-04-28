@@ -228,7 +228,7 @@ function(internal_process_cc_proto)
         PARSED_ARGS
         "PROTO_GENERATE;PROTO_BUILD"
         "SRC_BASE_PATH;SRC_REL_PATH;SRC_CORE_NAME;OUTPUT_BASE;HAS_SERVICES;OUT_CC_LIB_TARGET;OUT_CC_GEN_TARGET"
-        "PROTO_DEPS;DEP_TARGETS"
+        "PROTO_DEPS;DEP_TARGETS;OUT_CC_FILES;OUT_CC_SRC_FILES"
         ${ARGN}
     )
     if(NOT PARSED_ARGS_OUTPUT_BASE)
@@ -279,6 +279,13 @@ function(internal_process_cc_proto)
             set(GRPC_PARAM --plugin=protoc-gen-grpc=$<TARGET_FILE:grpc_cpp_plugin>)
             set(GRPC_PARAM ${GRPC_PARAM} --grpc_out ${CC_GEN_ROOT_DIR})
         endif()
+    endif()
+
+    if (PARSED_ARGS_OUT_CC_FILES)
+        set(${PARSED_ARGS_OUT_CC_FILES} "${output_files}" PARENT_SCOPE)
+    endif()
+    if (PARSED_ARGS_OUT_CC_SRC_FILES)
+        set(${PARSED_ARGS_OUT_CC_SRC_FILES} "${proto_srcs}" PARENT_SCOPE)
     endif()
 
     if (PARSED_ARGS_PROTO_GENERATE)
@@ -615,7 +622,7 @@ function(process_proto_file_v2)
     cmake_parse_arguments(
         PARSED_ARGS
         "ENABLE_CC;ENABLE_TS;ENABLE_PY;ENABLE_JAVA;PROTO_GENERATE;PROTO_BUILD"
-        "SRC;DEST;TS_PLUGIN;PROTO_GEN_DIR"
+        "SRC;DEST;TS_PLUGIN;PROTO_GEN_DIR;OUT_CC_FILES;OUT_CC_SRC_FILES"
         ""  # Relative path to proto (like import statement).
         ${ARGN}
     )
@@ -729,6 +736,8 @@ function(process_proto_file_v2)
             PROTO_DEPS        "${dependencies}"
             OUT_CC_LIB_TARGET INTERNAL_CC_LIB_TARGET
             OUT_CC_GEN_TARGET INTERNAL_CC_GEN_TARGET
+            OUT_CC_FILES      INTERNAL_CC_FILES
+            OUT_CC_SRC_FILES  INTERNAL_CC_SRC_FILES
             "${PROTO_GEN_FLAG}"
             "${PROTO_BUILD_FLAG}")
 
@@ -737,6 +746,13 @@ function(process_proto_file_v2)
         endif()
         if (PARSED_ARGS_PROTO_GENERATE)
              set(CC_GEN_TARGET ${INTERNAL_CC_GEN_TARGET} PARENT_SCOPE)
+        endif()
+
+        if (PARSED_ARGS_OUT_CC_FILES)
+             set(${PARSED_ARGS_OUT_CC_FILES} "${INTERNAL_CC_FILES}" PARENT_SCOPE)
+        endif()
+        if (PARSED_ARGS_OUT_CC_SRC_FILES)
+             set(${PARSED_ARGS_OUT_CC_SRC_FILES} "${INTERNAL_CC_SRC_FILES}" PARENT_SCOPE)
         endif()
     endif()
 
@@ -835,7 +851,7 @@ function(process_proto_set)
     cmake_parse_arguments(
         PARSED_ARGS
         "ENABLE_CC;ENABLE_PY;ENABLE_JAVA;ENABLE_TS;PROTO_GENERATE;PROTO_BUILD"
-        "TARGET;SOURCE_DIR;DEST_DIR;TS_PLUGIN;PROTOBUF_JAR;PROTO_GEN_DIR;OUT_CC_TARGET;OUT_PY_TARGET;OUT_JAVA_TARGET;OUT_TS_TARGET;OUT_GEN_TARGET"
+        "TARGET;SOURCE_DIR;DEST_DIR;TS_PLUGIN;PROTOBUF_JAR;PROTO_GEN_DIR;OUT_CC_TARGET;OUT_PY_TARGET;OUT_JAVA_TARGET;OUT_TS_TARGET;OUT_GEN_TARGET;OUT_CC_FILES;OUT_CC_SRC_FILES"
         "FILES;ADDITIONAL_JAR_INCLUDES"
         ${ARGN}
     )
@@ -888,16 +904,22 @@ function(process_proto_set)
     set(JAVA_GEN_TARGETS)
     set(TS_GEN_TARGETS)
     set(PY_ROOT_DIR)
+    set(CC_FILES_LIST)
+    set(CC_SRC_FILES_LIST)
 
     foreach(CUR_FILE IN LISTS PARSED_ARGS_FILES)
         process_proto_file_v2(
             SRC ${PARSED_ARGS_SOURCE_DIR}/${CUR_FILE}
             DEST ${PARSED_ARGS_DEST_DIR}/${CUR_FILE}
+            OUT_CC_FILES CUR_CC_FILES
+            OUT_CC_SRC_FILES CUR_CC_SRC_FILES
             ${LANG_ARGS}
             ${PHASE_ARGS}
         )
 
         if (PARSED_ARGS_ENABLE_CC)
+            list(APPEND CC_FILES_LIST ${CUR_CC_FILES})
+            list(APPEND CC_SRC_FILES_LIST ${CUR_CC_SRC_FILES})
             if (PARSED_ARGS_PROTO_BUILD)
                 list(APPEND CC_LIBS ${CC_LIB_TARGET})
             endif()
@@ -980,6 +1002,13 @@ function(process_proto_set)
                 set(${PARSED_ARGS_OUT_TS_TARGET} ${SET_TS_TARGET} PARENT_SCOPE)
             endif()
         endif()
+    endif()
+
+    if (PARSED_ARGS_OUT_CC_FILES)
+        set(${PARSED_ARGS_OUT_CC_FILES} "${CC_FILES_LIST}" PARENT_SCOPE)
+    endif()
+    if (PARSED_ARGS_OUT_CC_SRC_FILES)
+        set(${PARSED_ARGS_OUT_CC_SRC_FILES} "${CC_SRC_FILES_LIST}" PARENT_SCOPE)
     endif()
 
     if (PARSED_ARGS_PROTO_GENERATE)
