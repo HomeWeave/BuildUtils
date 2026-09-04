@@ -851,7 +851,7 @@ function(process_proto_set)
     cmake_parse_arguments(
         PARSED_ARGS
         "ENABLE_CC;ENABLE_PY;ENABLE_JAVA;ENABLE_TS;PROTO_GENERATE;PROTO_BUILD"
-        "TARGET;SOURCE_DIR;DEST_DIR;TS_PLUGIN;PROTOBUF_JAR;PROTO_GEN_DIR;OUT_CC_TARGET;OUT_PY_TARGET;OUT_JAVA_TARGET;OUT_TS_TARGET;OUT_GEN_TARGET;OUT_CC_FILES;OUT_CC_SRC_FILES"
+        "TARGET;SOURCE_DIR;DEST_DIR;TS_PLUGIN;TS_BASE_DIR;PROTOBUF_JAR;PROTO_GEN_DIR;OUT_CC_TARGET;OUT_PY_TARGET;OUT_JAVA_TARGET;OUT_TS_TARGET;OUT_GEN_TARGET;OUT_CC_FILES;OUT_CC_SRC_FILES"
         "FILES;ADDITIONAL_JAR_INCLUDES"
         ${ARGN}
     )
@@ -950,6 +950,7 @@ function(process_proto_set)
 
         if (PARSED_ARGS_ENABLE_TS)
             if (PARSED_ARGS_PROTO_GENERATE)
+                set(TS_ROOT_DIR ${TS_PROTO_ROOT_DIR})
                 list(APPEND TS_GEN_TARGETS ${TS_PROTO_TARGET})
             endif()
         endif()
@@ -1000,6 +1001,9 @@ function(process_proto_set)
             endif()
             if (PARSED_ARGS_OUT_TS_TARGET)
                 set(${PARSED_ARGS_OUT_TS_TARGET} ${SET_TS_TARGET} PARENT_SCOPE)
+            endif()
+            if (PARSED_ARGS_OUT_TS_BASE_DIR)
+                set(${PARSED_ARGS_OUT_TS_BASE_DIR} ${TS_ROOT_DIR} PARENT_SCOPE)
             endif()
         endif()
     endif()
