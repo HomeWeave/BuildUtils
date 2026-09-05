@@ -291,7 +291,7 @@ function(internal_process_cc_proto)
     if (PARSED_ARGS_PROTO_GENERATE)
         FetchContent_GetProperties(protobuf)  # Assume it's called protobuf.
         if(NOT protobuf_POPULATED)
-          message(FATAL "Unable to locate protobuf dependency.")
+          message(FATAL_ERROR "Unable to locate protobuf dependency.")
         endif()
         set(PB_SRC ${protobuf_SOURCE_DIR})
 
@@ -404,7 +404,7 @@ function(internal_process_py_proto)
     if (PARSED_ARGS_PROTO_GENERATE)
         FetchContent_GetProperties(protobuf)  # Assume it's called protobuf.
         if(NOT protobuf_POPULATED)
-          message(FATAL "Unable to locate protobuf dependency.")
+          message(FATAL_ERROR "Unable to locate protobuf dependency.")
         endif()
         set(PB_SRC ${protobuf_SOURCE_DIR})
 
@@ -490,7 +490,7 @@ function(internal_process_java_proto)
     if (PARSED_ARGS_PROTO_GENERATE)
         FetchContent_GetProperties(protobuf)  # Assume it's called protobuf.
         if(NOT protobuf_POPULATED)
-          message(FATAL "Unable to locate protobuf dependency.")
+          message(FATAL_ERROR "Unable to locate protobuf dependency.")
         endif()
         set(PB_SRC ${protobuf_SOURCE_DIR})
 
@@ -576,7 +576,7 @@ function(internal_process_ts_proto)
     if (PARSED_ARGS_PROTO_GENERATE)
         FetchContent_GetProperties(protobuf)  # Assume it's called protobuf.
         if(NOT protobuf_POPULATED)
-          message(FATAL "Unable to locate protobuf dependency.")
+          message(FATAL_ERROR "Unable to locate protobuf dependency.")
         endif()
         set(PB_SRC ${protobuf_SOURCE_DIR})
 
