@@ -608,13 +608,11 @@ function(internal_process_ts_proto)
         endif()
     endif()
 
-    if (PARSED_ARGS_PROTO_BUILD)
-        if (PARSED_ARGS_OUT_TS_FILES)
-            set(${PARSED_ARGS_OUT_TS_FILES} "${OUTPUT_FILE}" PARENT_SCOPE)
-        endif()
-        if (PARSED_ARGS_OUT_TS_ROOT_DIR)
-            set(${PARSED_ARGS_OUT_TS_ROOT_DIR} "${TS_GEN_ROOT_DIR}" PARENT_SCOPE)
-        endif()
+    if (PARSED_ARGS_OUT_TS_FILES)
+        set(${PARSED_ARGS_OUT_TS_FILES} "${OUTPUT_FILE}" PARENT_SCOPE)
+    endif()
+    if (PARSED_ARGS_OUT_TS_ROOT_DIR)
+        set(${PARSED_ARGS_OUT_TS_ROOT_DIR} "${TS_GEN_ROOT_DIR}" PARENT_SCOPE)
     endif()
 endfunction()
 
@@ -622,7 +620,7 @@ function(process_proto_file_v2)
     cmake_parse_arguments(
         PARSED_ARGS
         "ENABLE_CC;ENABLE_TS;ENABLE_PY;ENABLE_JAVA;PROTO_GENERATE;PROTO_BUILD"
-        "SRC;DEST;TS_PLUGIN;PROTO_GEN_DIR;OUT_CC_FILES;OUT_CC_SRC_FILES"
+        "SRC;DEST;TS_PLUGIN;PROTO_GEN_DIR;OUT_CC_FILES;OUT_CC_SRC_FILES;CC_GEN_DIR;PY_GEN_DIR;JAVA_GEN_DIR;TS_GEN_DIR"
         ""  # Relative path to proto (like import statement).
         ${ARGN}
     )
@@ -842,8 +840,8 @@ function(process_proto_file_v2)
         endif()
         if (PARSED_ARGS_PROTO_BUILD)
             set(TS_PROTO_OUTPUT_FILE ${INTERNAL_TS_FILES} PARENT_SCOPE)
-            set(TS_PROTO_ROOT_DIR ${INTERNAL_TS_ROOT_DIR} PARENT_SCOPE)
         endif()
+        set(TS_PROTO_ROOT_DIR ${INTERNAL_TS_ROOT_DIR} PARENT_SCOPE)
     endif()
 endfunction()
 
@@ -851,7 +849,7 @@ function(process_proto_set)
     cmake_parse_arguments(
         PARSED_ARGS
         "ENABLE_CC;ENABLE_PY;ENABLE_JAVA;ENABLE_TS;PROTO_GENERATE;PROTO_BUILD"
-        "TARGET;SOURCE_DIR;DEST_DIR;TS_PLUGIN;TS_BASE_DIR;PROTOBUF_JAR;PROTO_GEN_DIR;OUT_CC_TARGET;OUT_PY_TARGET;OUT_JAVA_TARGET;OUT_TS_TARGET;OUT_GEN_TARGET;OUT_CC_FILES;OUT_CC_SRC_FILES"
+        "TARGET;SOURCE_DIR;DEST_DIR;TS_PLUGIN;TS_BASE_DIR;PROTOBUF_JAR;PROTO_GEN_DIR;OUT_CC_TARGET;OUT_PY_TARGET;OUT_JAVA_TARGET;OUT_TS_TARGET;OUT_TS_BASE_DIR;OUT_GEN_TARGET;OUT_CC_FILES;OUT_CC_SRC_FILES"
         "FILES;ADDITIONAL_JAR_INCLUDES"
         ${ARGN}
     )
@@ -949,8 +947,8 @@ function(process_proto_set)
         endif()
 
         if (PARSED_ARGS_ENABLE_TS)
+            set(TS_ROOT_DIR ${TS_PROTO_ROOT_DIR})
             if (PARSED_ARGS_PROTO_GENERATE)
-                set(TS_ROOT_DIR ${TS_PROTO_ROOT_DIR})
                 list(APPEND TS_GEN_TARGETS ${TS_PROTO_TARGET})
             endif()
         endif()
